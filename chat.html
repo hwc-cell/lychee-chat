@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script src="embed.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lychee-Chat — 聊天窗口</title>
+<link rel="stylesheet" href="chat.css">
+<link rel="stylesheet" href="themes.css">
+<script src="theme.js"></script>
+<style>
+  html.embedded body { background: transparent; overflow: hidden; }
+  html.embedded .browser, html.embedded .site, html.embedded .chat-launcher { display: none !important; }
+  html.embedded .desktop { height: 100%; background: transparent; }
+  html.embedded .chat-window {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 20px;
+    box-shadow: none;
+    animation: none;
+  }
+  html.embedded .chat-window.is-minimized { height: 100% !important; }
+  html.embedded .context-popover { bottom: 126px; }
+  .chat-logo { background: transparent; overflow: visible; padding: 0; }
+  .chat-logo img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 3px 7px rgba(0, 0, 0, .35)); }
+  .launcher-logo { overflow: visible; padding: 0; background: transparent; }
+  .launcher-logo img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .3)); }
+  .ext-sight { background: transparent; padding: 0; overflow: hidden; }
+  .ext-sight img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="desktop">
+  <header class="browser">
+    <div class="tabline">
+      <div class="mac-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="tabs">
+        <div class="tab is-active">
+          <span class="tab-favicon tab-northstar">N</span>
+          <span class="tab-title">登录页改版 — Northstar</span>
+          <span class="tab-close" aria-hidden="true">×</span>
+        </div>
+        <div class="tab">
+          <span class="tab-favicon tab-figma">F</span>
+          <span class="tab-title">Figma — Design System</span>
+        </div>
+        <button class="new-tab" type="button" title="新标签页">+</button>
+      </div>
+      <div class="tab-spacer"></div>
+    </div>
+    <div class="toolbar">
+      <div class="nav-controls" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14.5 6-6 6 6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9.5 6 6 6-6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></svg>
+      </div>
+      <div class="address">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="9" rx="2"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/></svg>
+        <span>northstar.app/login</span>
+        <span class="address-pill">已加密</span>
+      </div>
+      <div class="toolbar-right">
+        <div class="ext-icons">
+          <span class="ext-box" title="密码管理器" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="3.2"/><path d="m10.3 12.7 8-8M15.3 7.7l2 2"/></svg>
+          </span>
+          <span class="ext-box ext-sight is-live" title="Lychee-Chat 已连接"><img src="assets/icon-32.png" alt=""><span class="live-pip"></span></span>
+        </div>
+        <div class="avatar avatar-user">H</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="site">
+    <aside class="site-nav">
+      <div class="site-brand"><span class="site-logo">N</span><span>Northstar</span></div>
+      <nav class="site-navlist" aria-label="项目导航">
+        <a class="site-navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4v-9.5Z"/></svg>Overview</a>
+        <a class="site-navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Projects</a>
+        <a class="site-navitem is-active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3.5 8 4v9l-8 4-8-4v-9l8-4Z"/><path d="m8 12 2.6 2.6L16 9.2"/></svg>Design reviews<span class="nav-count">3</span></a>
+        <a class="site-navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>Docs</a>
+        <div class="site-nav-sep"></div>
+        <a class="site-navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3.9a7 7 0 0 0-1.7-1L14.5 3h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.3-.9-2 3.4L6.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5a7 7 0 0 0 .1-1Z"/></svg>Settings</a>
+      </nav>
+      <div class="site-project">
+        <span class="site-kicker">当前项目</span>
+        <strong>Web app · Q4</strong>
+        <div class="project-bar"><span></span></div>
+        <small>64% 完成 · 8 位成员</small>
+      </div>
+    </aside>
+
+    <main class="site-content">
+      <div class="site-topbar">
+        <div class="crumbs">Projects <span>/</span> Web app <span>/</span> <strong>登录页改版</strong></div>
+        <div class="collab">
+          <div class="avatar-stack" aria-hidden="true">
+            <span class="avatar avatar-a">M</span>
+            <span class="avatar avatar-b">J</span>
+            <span class="avatar avatar-c">H</span>
+          </div>
+          <button class="share-btn" type="button">分享预览</button>
+        </div>
+      </div>
+      <div class="site-heading">
+        <div>
+          <span class="site-kicker">Design review · v3</span>
+          <h1>登录页改版</h1>
+          <p>减少认知负担，把用户带回主路径。</p>
+        </div>
+        <span class="review-pill"><span></span>In review</span>
+      </div>
+
+      <div class="canvas">
+        <div class="login-shell">
+          <div class="login-side">
+            <div class="login-side-brand"><span class="site-logo inverse">N</span>Northstar</div>
+            <p>把复杂留给系统，<br>把清晰留给人。</p>
+            <div class="login-side-lines"><span></span><span></span><span></span></div>
+          </div>
+          <div class="login-form">
+            <div class="form-head"><h2>欢迎回来</h2><p>登录以继续你的项目</p></div>
+            <label class="fake-label">工作邮箱</label>
+            <div class="fake-field">you@company.com</div>
+            <div class="fake-label-row"><label class="fake-label">密码</label><a href="#">忘记密码？</a></div>
+            <div class="fake-field password">••••••••••</div>
+            <div class="fake-cta">登录</div>
+            <div class="fake-divider"><span>或</span></div>
+            <div class="fake-social"><span class="google-g">G</span>使用 Google 继续</div>
+            <p class="fake-foot">还没有账号？<a href="#">创建账号</a></p>
+          </div>
+        </div>
+        <div class="annotation">
+          <span class="annotation-dot"></span>
+          <p>主按钮和第三方登录的视觉权重太接近</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <button class="chat-launcher" id="chatLauncher" type="button" hidden aria-label="打开 Lychee-Chat 聊天窗口">
+    <span class="launcher-logo"><img src="assets/icon-48.png" alt=""></span>
+    <span>Lychee-Chat</span>
+    <span class="launcher-dot"></span>
+  </button>
+
+  <section class="chat-window" id="chatWindow" aria-label="Lychee-Chat 聊天窗口">
+    <header class="chat-head">
+      <div class="chat-head-row">
+        <div class="chat-brand">
+          <span class="chat-logo"><img src="assets/icon-48.png" alt=""></span>
+          <span class="chat-name">Lychee-Chat</span>
+          <span class="chat-online">在线</span>
+        </div>
+        <span class="chat-drag-grip" title="按住标题栏拖动窗口" aria-hidden="true">
+          <svg viewBox="0 0 16 10" fill="currentColor"><circle cx="3" cy="2" r="1.1"/><circle cx="8" cy="2" r="1.1"/><circle cx="13" cy="2" r="1.1"/><circle cx="3" cy="8" r="1.1"/><circle cx="8" cy="8" r="1.1"/><circle cx="13" cy="8" r="1.1"/></svg>
+        </span>
+        <div class="chat-head-actions">
+          <button class="icon-btn" id="sessionsBtn" type="button" title="会话记录" aria-label="打开会话记录">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5.5h16v11H9L4.5 20v-3.5H4v-11Z"/><path d="M8 9.5h8M8 12.5h5"/></svg>
+          </button>
+          <button class="icon-btn" id="newChatBtn" type="button" title="新建会话" aria-label="新建会话">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="icon-btn" id="minimizeBtn" type="button" title="最小化" aria-label="最小化">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9h12"/></svg>
+          </button>
+          <button class="icon-btn" type="button" data-theme-toggle title="切换主题" aria-label="切换主题">
+            <span data-theme-icon></span>
+          </button>
+          <button class="icon-btn" id="closeBtn" type="button" title="关闭" aria-label="关闭聊天窗口">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="session-title" id="sessionTitleBtn" type="button" title="查看会话列表">
+        <span id="sessionTitle">新会话</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 9.5 5 5 5-5"/></svg>
+      </button>
+      <div class="model-line">
+        <span class="model-pip"></span>
+        <span id="modelName">未配置模型</span>
+        <span class="dot-sep">·</span>
+        <span>视觉</span>
+        <span class="dot-sep">·</span>
+        <span id="modelContext">窗口 —</span>
+        <a class="model-settings" href="options.html" target="_blank" rel="noreferrer">设置</a>
+      </div>
+    </header>
+
+    <button class="context-strip" id="contextStrip" type="button" aria-haspopup="dialog" aria-expanded="false">
+      <span class="context-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3.5 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 16.5l8 4 8-4"/></svg>
+        上下文 <strong id="contextPercent">68%</strong>
+      </span>
+      <span class="context-track"><span id="contextFill" style="width:0%"></span></span>
+      <span class="context-auto">
+        <span class="auto-dot"></span>
+        <span id="autoLabel">自动压缩</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 15 5-5 5 5"/></svg>
+      </span>
+    </button>
+
+    <div class="chat-notice demo-notice" id="demoNotice" hidden>
+      <span>演示模式 · 回复为预设内容</span>
+      <button type="button" id="demoSettingsBtn">连接真实模型</button>
+    </div>
+    <div class="chat-notice error-notice" id="errorNotice" hidden>
+      <span id="errorNoticeText"></span>
+      <button type="button" id="errorNoticeSettings">设置</button>
+      <button type="button" id="errorNoticeClose" aria-label="关闭错误提示">×</button>
+    </div>
+
+    <div class="messages" id="messages" aria-live="polite"></div>
+
+    <div class="composer">
+      <div class="shot-chip" id="shotChip">
+        <span class="shot-thumb" aria-hidden="true">
+          <span class="shot-thumb-bar"></span>
+          <span class="shot-thumb-line wide"></span>
+          <span class="shot-thumb-line"></span>
+          <span class="shot-thumb-line short"></span>
+        </span>
+        <span class="shot-copy"><strong>当前标签页</strong><small>northstar.app/login · 发送时附带</small></span>
+        <button class="shot-remove" id="shotRemove" type="button" title="本轮不附带截图" aria-label="本轮不附带截图">×</button>
+      </div>
+      <div class="pending-attachments" id="pendingAttachments" hidden></div>
+      <div class="composer-box">
+        <textarea id="composerInput" rows="1" placeholder="继续问点什么…" aria-label="消息"></textarea>
+        <button class="attach-btn" id="attachBtn" type="button" title="添加图片附件，最多 4 张" aria-label="添加图片附件">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m20 11.5-7.8 7.8a5 5 0 0 1-7-7L13 4.5a3.4 3.4 0 0 1 4.8 4.8l-7.9 7.9a1.8 1.8 0 0 1-2.5-2.5l7.4-7.4"/></svg>
+        </button>
+        <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+        <button class="send-btn" id="sendBtn" type="button" title="发送" aria-label="发送" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>
+        </button>
+      </div>
+      <div class="composer-meta">
+        <button class="capture-toggle is-on" id="captureToggle" type="button">
+          <span class="status-dot"></span>
+          <span id="captureLabel">每轮截图</span>
+        </button>
+        <span class="composer-hint">Enter 发送 · Shift + Enter 换行</span>
+        <a class="settings-link" href="options.html" target="_blank" rel="noreferrer">模型设置</a>
+      </div>
+    </div>
+
+    <div class="session-scrim" id="sessionScrim"></div>
+    <aside class="sessions-drawer" id="sessionsDrawer" aria-label="会话列表" aria-hidden="true">
+      <div class="drawer-head">
+        <div><span class="drawer-kicker">History</span><h2>会话</h2></div>
+        <button class="drawer-close" id="closeSessions" type="button" aria-label="关闭会话列表">×</button>
+      </div>
+      <button class="new-session-btn" id="newSessionBtn" type="button">+ 新建会话</button>
+      <label class="session-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        <input id="sessionSearch" type="search" placeholder="搜索会话" autocomplete="off">
+      </label>
+      <div class="session-groups" id="sessionList"></div>
+      <div class="drawer-foot">
+        <a href="options.html" target="_blank" rel="noreferrer">连接与模型设置 <span>↗</span></a>
+        <span>仅保存在本机</span>
+      </div>
+    </aside>
+
+    <div class="context-popover" id="contextPopover" role="dialog" aria-label="上下文管理" aria-hidden="true">
+      <div class="popover-head">
+        <div><span class="drawer-kicker">Context</span><h3>上下文管理</h3></div>
+        <button class="drawer-close" id="closeContext" type="button" aria-label="关闭上下文设置">×</button>
+      </div>
+      <div class="usage-head"><span>已使用</span><strong id="popoverUsage">0 / —</strong></div>
+      <div class="usage-bar"><span id="popoverFill"></span></div>
+      <p class="usage-note" id="popoverNote">等待第一轮对话</p>
+      <div class="context-window-row">
+        <span>模型窗口</span>
+        <span class="context-window-copy"><strong id="contextWindowValue">—</strong><button type="button" id="contextAdjustBtn">调整</button></span>
+      </div>
+      <label class="popover-toggle">
+        <span><strong>自动压缩</strong><small>接近上限时摘要较早的消息</small></span>
+        <input type="checkbox" id="autoCompress" checked>
+        <span class="switch"></span>
+      </label>
+      <div class="popover-row">
+        <span>触发阈值</span>
+        <div class="mini-seg" id="thresholdSeg">
+          <button type="button" data-value="70" class="is-active">70%</button>
+          <button type="button" data-value="80">80%</button>
+          <button type="button" data-value="90">90%</button>
+        </div>
+      </div>
+      <label class="popover-select">
+        <span>压缩策略</span>
+        <select id="compressionStrategy">
+          <option>摘要较早消息</option>
+          <option>只保留最近 10 轮</option>
+          <option>摘要 + 保留关键代码</option>
+        </select>
+      </label>
+      <button class="compress-btn" id="compressBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3.5 8 4-8 4-8-4 8-4Z"/><path d="m4 12 8 4 8-4M4 16.5l8 4 8-4"/></svg>
+        立即压缩
+      </button>
+      <p class="popover-foot">用量为本地估算；摘要只在本机会话内保留，不会上传到第三方。</p>
+    </div>
+
+    <div class="chat-toast" id="chatToast" role="status" aria-live="polite"></div>
+  </section>
+
+</div>
+
+<script src="chat.js" type="module"></script>
+</body>
+</html>

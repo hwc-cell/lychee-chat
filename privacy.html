@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lychee-Chat 隐私政策</title>
+<style>
+  :root {
+    --ink: #151815;
+    --paper: #fffdf8;
+    --cream: #f3efe5;
+    --line: #e4ded1;
+    --muted: #5f665c;
+    --faint: #6c7367;
+    --lime: #d47b68;
+    --font: "Inter", "SF Pro Text", "PingFang SC", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(rgba(21, 24, 21, .035) .5px, transparent .5px) 0 0 / 8px 8px,
+      var(--cream);
+    color: var(--ink);
+    font-family: var(--font);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    width: min(780px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 38px 0 64px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 26px;
+  }
+  .mark {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 11px;
+    background: #f7e5df;
+    color: #a8463c;
+    font-size: 15px;
+    font-weight: 750;
+    box-shadow: 0 0 0 1px rgba(21, 24, 21, .08);
+  }
+  .brand strong { font-size: 14px; letter-spacing: -.02em; }
+  .brand span { color: var(--faint); font-size: 10px; }
+  .kicker {
+    color: var(--faint);
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 8px 0 10px;
+    font-size: clamp(28px, 4vw, 38px);
+    line-height: 1.15;
+    letter-spacing: -.045em;
+  }
+  .lead {
+    max-width: 640px;
+    margin: 0 0 28px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+  .meta span {
+    padding: 4px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 253, 248, .7);
+    color: var(--faint);
+    font-size: 9px;
+  }
+  article {
+    padding: 30px 32px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--paper);
+    box-shadow: 0 18px 50px -38px rgba(21, 24, 21, .35);
+  }
+  article section + section {
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  h2 { margin: 0 0 8px; font-size: 15px; letter-spacing: -.02em; }
+  p { margin: 8px 0; font-size: 11.5px; color: #3c423a; }
+  ul { margin: 8px 0; padding-left: 18px; }
+  li { margin: 5px 0; font-size: 11.5px; color: #3c423a; }
+  li::marker { color: #7e8c60; }
+  strong { font-weight: 650; }
+  a { color: #52662e; text-underline-offset: 2px; }
+  code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--cream);
+    font-size: .9em;
+  }
+  .callout {
+    padding: 12px 14px;
+    border: 1px solid #dce7c2;
+    border-radius: 10px;
+    background: #f4f9e6;
+    color: #435326;
+    font-size: 11px;
+  }
+  .callout strong { color: #2f3d19; }
+  .contact {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--cream);
+  }
+  .contact p { margin: 2px 0; }
+  footer {
+    margin-top: 18px;
+    color: var(--faint);
+    font-size: 9px;
+    text-align: center;
+  }
+  @media (max-width: 600px) {
+    .page { padding-top: 24px; }
+    article { padding: 22px 18px; border-radius: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="brand">
+    <div class="mark">L</div>
+    <div><strong>Lychee-Chat</strong><br><span>Privacy Policy · 隐私政策</span></div>
+  </div>
+
+  <div class="kicker">Chrome Extension</div>
+  <h1>隐私政策</h1>
+  <p class="lead">Lychee-Chat 是一个运行在 Chrome 中的浏览器扩展，让你与支持视觉能力的 AI 模型讨论当前页面，并在每一轮对话中按需附带页面截图。</p>
+  <div class="meta">
+    <span>生效日期：2026-10-24</span>
+    <span>适用产品：Lychee-Chat Chrome 扩展</span>
+    <span>版本：0.2.0</span>
+  </div>
+
+  <article>
+    <section>
+      <h2>1. 概述</h2>
+      <p>本政策说明 Lychee-Chat 如何处理你的配置、对话内容和页面截图。Lychee-Chat 采用“自带密钥”（BYOK）模式：你自行选择 AI 模型提供商并输入 API Key，扩展直接把请求发送到该提供商的 API。</p>
+      <div class="callout"><strong>开发者不运营中转服务器。</strong> Lychee-Chat 不收集、不接收、不存储你的 API Key、聊天内容或截图。数据直接在你的浏览器与所选提供商之间传输。</div>
+    </section>
+
+    <section>
+      <h2>2. 扩展访问哪些数据</h2>
+      <ul>
+        <li><strong>当前页面截图：</strong>仅在你通过工具栏图标打开聊天窗，并发送消息且开启截图时捕获。扩展不会持续录屏，也不会在后台定时截图。</li>
+        <li><strong>图片附件：</strong>你主动点击附件按钮选择并随消息发送的图片，最多 4 张。</li>
+        <li><strong>当前页面内容：</strong>截图由 Chrome 的可见标签页捕获能力生成，扩展不读取完整浏览历史。</li>
+        <li><strong>聊天内容：</strong>你输入的文本和所选模型返回的文本。</li>
+        <li><strong>配置信息：</strong>所选提供商、Base URL、模型、API Key，以及本地保存的会话记录。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. 数据存储在哪里</h2>
+      <p>API Key、模型配置和聊天文本通过 <code>chrome.storage.local</code> 保存在你的本地 Chrome 配置中；界面偏好（主题、聊天窗位置、是否显示页面悬浮按钮）也仅保存在本机。它们不会同步到开发者服务器，也不会上传到 Lychee-Chat 自建的服务。</p>
+      <p>页面截图和你上传的图片只在发送请求时短暂保留在内存中，并发送给你选择的模型提供商；Lychee-Chat 不会把图片内容持久化到本地存储。重新打开页面后，历史消息中的图片只显示占位提示和文件名。</p>
+      <p>你可以在聊天窗中删除单个会话，或通过移除扩展来清除扩展保存在本地的数据。提供商一侧的数据保留规则由该提供商决定。</p>
+    </section>
+
+    <section>
+      <h2>4. 数据发送给谁</h2>
+      <p>当你发送消息时，Lychee-Chat 会把该轮对话文本、按需附带的页面截图、你主动上传的图片附件和必要的请求参数发送到你选择的提供商 API。你的 API Key 作为身份凭证随请求发送给该提供商。</p>
+      <p>预置提供商可能包括：月之暗面、DeepSeek、阿里云百炼、智谱、豆包/火山方舟、MiniMax、小米 MiMo、硅基流动、Anthropic、OpenAI、Google Gemini、xAI、OpenRouter，以及本地运行的 Ollama 或 LM Studio。自定义提供商的地址由你填写。</p>
+      <p>这些第三方服务会按照各自的隐私政策和服务条款处理数据。使用前请阅读对应提供商的条款。Lychee-Chat 不控制第三方的处理方式。</p>
+      <p>内置的“Lychee Demo”演示模式不会请求任何外部接口，只返回本地预设的演示回复。</p>
+    </section>
+
+    <section>
+      <h2>5. 我们不做什么</h2>
+      <ul>
+        <li>不向开发者服务器上传 API Key、聊天内容或截图。</li>
+        <li>不把数据出售、出租或用于广告定向。</li>
+        <li>不把用户数据用于训练 Lychee-Chat 或任何模型。</li>
+        <li>不包含分析 SDK、广告 SDK 或远程代码；扩展运行的所有代码都打包在安装包内。</li>
+        <li>不读取与当前对话无关的浏览历史或后台标签页内容。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. 权限说明</h2>
+      <ul>
+        <li><strong>activeTab：</strong>在你点击扩展图标后，允许扩展访问当前标签页并捕获当前可见页面的截图。</li>
+        <li><strong>scripting：</strong>用于在当前页面注入右上角的浮动聊天窗。</li>
+        <li><strong>storage：</strong>保存模型配置、API Key 和本地会话记录。</li>
+        <li><strong>特定 API 域名权限：</strong>用于连接你选择的 AI 提供商接口。</li>
+        <li><strong>可选域名权限：</strong>当你添加自定义提供商时，扩展会在保存或测试时请求该接口域名的访问权限。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. 儿童隐私</h2>
+      <p>Lychee-Chat 不是面向 13 岁以下儿童设计或提供的产品。请勿让儿童使用本扩展发送个人信息或包含个人信息的页面截图。</p>
+    </section>
+
+    <section>
+      <h2>8. 有限使用承诺</h2>
+      <p>Lychee-Chat 对用户数据的访问、使用和传输仅用于提供其单一用途：让用户与视觉模型讨论当前页面。我们不会将数据用于与这一用途无关的目的，也不会出售用户数据。</p>
+    </section>
+
+    <section>
+      <h2>9. 政策更新</h2>
+      <p>如果本政策发生实质性变化，我们会更新本页面的生效日期和版本说明。继续使用扩展即表示你接受更新后的政策。</p>
+    </section>
+
+    <section>
+      <h2>10. 联系方式</h2>
+      <p>如对本政策有疑问，请联系：</p>
+      <div class="contact">
+        <p><strong>开发者：</strong>Lychee</p>
+        <p><strong>邮箱：</strong><a href="mailto:help@lycheeledger.cn">help@lycheeledger.cn</a></p>
+      </div>
+      <p>如对隐私政策、数据处理或删除请求有疑问，请通过上述邮箱联系我们，我们会在 7 个工作日内回复。</p>
+    </section>
+  </article>
+
+  <footer>Lychee-Chat · Privacy Policy · © 2026 Lychee</footer>
+</div>
+</body>
+</html>
