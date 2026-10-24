@@ -51,6 +51,12 @@ Chrome Web Store 的隐私标签页要求填写可公开访问的隐私政策 UR
 - 隐私政策已经填入工作室名称 **Lychee** 和支持邮箱 **help@lycheeledger.cn**，只需完成公开托管；
 - 在商店后台填入公开 URL，例如 `https://yourname.github.io/lychee-chat/privacy.html`。
 
+公开免责声明已经托管在：
+
+`https://lycheeledger.cn/web/lychee-chat-disclaimer`
+
+注意：免责声明不能替代 Chrome Web Store 要求的隐私政策 URL，两者都需要可公开访问。商店后台的隐私政策字段请填写独立隐私政策页面的地址。
+
 GitHub Pages 示例：
 
 1. 新建一个公开仓库，放入 `privacy.html`；
