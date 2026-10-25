@@ -11,6 +11,8 @@ Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点
 - 模型模式：自带 API Key（BYOK）或本地模型
 - 许可证：[MIT](LICENSE)
 
+> 第一次安装？查看完整的[本地加载指南](INSTALL.md)。
+
 ## 功能
 
 ### 会看页面的聊天窗口
@@ -57,6 +59,8 @@ Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点
 ## 安装
 
 ### 从源码加载
+
+完整步骤与常见问题请见 [INSTALL.md](INSTALL.md)。
 
 1. 克隆或下载本仓库：
 
