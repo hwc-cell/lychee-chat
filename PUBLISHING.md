@@ -83,10 +83,9 @@ GitHub Pages 示例：
 
 ### 2.4 打包 ZIP
 
-在 `lychee-chat` 目录中执行（不要把整个外层文件夹打进去）：
+在项目根目录中执行（不要把整个外层文件夹打进去）：
 
 ```bash
-cd ~/Documents/lychee-chat
 rm -f ../lychee-chat-0.2.0.zip
 zip -r ../lychee-chat-0.2.0.zip . \
   -x "dev-*" "preview-*" "store/*" "PUBLISHING.md" "*.zip" ".DS_Store" "dev-chrome-mock.js"
