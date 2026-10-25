@@ -111,7 +111,7 @@ Lychee-Chat 不运营中转服务器，也不包含分析或广告 SDK。
 
 发送截图前请确认页面不包含不希望交给第三方的敏感信息。第三方提供商的数据处理受其各自隐私政策约束。
 
-完整说明：[隐私政策](privacy.html)
+完整说明：[隐私政策](privacy.html) · [在线版](https://lycheeledger.cn/web/lychee-chat-privacy)
 
 ## 项目结构
 

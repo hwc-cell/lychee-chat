@@ -48,8 +48,9 @@ Chrome Web Store 的隐私标签页要求填写可公开访问的隐私政策 UR
 
 - 把 `privacy.html` 上传到 GitHub Pages、Cloudflare Pages、Netlify 或自己的静态站点；
 - 注意：该页面必须能脱离扩展直接打开（不要依赖 `chrome.*` API）；
-- 隐私政策已经填入工作室名称 **Lychee** 和支持邮箱 **help@lycheeledger.cn**，只需完成公开托管；
-- 在商店后台填入公开 URL，例如 `https://yourname.github.io/lychee-chat/privacy.html`。
+- 隐私政策已经填入工作室名称 **Lychee** 和支持邮箱 **help@lycheeledger.cn**；
+- 隐私政策已公开托管：`https://lycheeledger.cn/web/lychee-chat-privacy`；
+- 商店后台的 Privacy policy URL 直接填写上述地址。
 
 公开免责声明已经托管在：
 
@@ -115,6 +116,10 @@ unzip -l ../lychee-chat-0.2.0.zip | head -30
 **开发者 / 发布者**：Lychee
 
 **支持邮箱**：help@lycheeledger.cn
+
+**隐私政策 URL**：https://lycheeledger.cn/web/lychee-chat-privacy
+
+**免责声明 URL**：https://lycheeledger.cn/web/lychee-chat-disclaimer
 
 **简短说明（Summary）**：
 在浏览器右上角与视觉模型聊天，每轮自动附带当前页面截图。
