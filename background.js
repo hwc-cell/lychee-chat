@@ -183,13 +183,17 @@ async function prepareChatRequest(message) {
   if (attachments.reduce((total, item) => total + item.length, 0) > 10_000_000) {
     throw new Error("附件总大小过大，请减少图片数量");
   }
+  const contextSummary = typeof message.contextSummary === "string"
+    ? message.contextSummary.trim().slice(0, 8000)
+    : "";
   return {
     provider,
     demo: false,
     model: provider.selectedModel,
     messages: message.messages,
     screenshotDataUrl: message.screenshotDataUrl || null,
-    attachments
+    attachments,
+    contextSummary
   };
 }
 
@@ -330,6 +334,7 @@ chrome.runtime.onConnect.addListener((port) => {
           messages: prepared.messages,
           screenshotDataUrl: prepared.screenshotDataUrl,
           attachments: prepared.attachments,
+          contextSummary: prepared.contextSummary,
           maxTokens: 1600,
           signal: controller.signal,
           onDelta: (delta) => post({ type: "delta", text: delta })

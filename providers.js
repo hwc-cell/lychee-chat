@@ -1,9 +1,28 @@
 import { inferContextWindow } from "./model-context.js";
 
 const SYSTEM_PROMPT =
-  "你是 Lychee-Chat，一个带视觉能力的浏览器助手。你能看到用户随消息附上的当前浏览器页面截图。" +
-  "请优先结合截图回答，给出具体、可执行的结论；不要复述截图中已经显而易见的内容。" +
+  "你是 Lychee-Chat，一个浏览器 AI 助手。" +
   "默认使用用户正在使用的语言，保持简洁。";
+
+const IMAGE_PROMPT =
+  "用户可能随消息附上当前页面截图和/或图片附件。" +
+  "请优先结合可见图片回答，给出具体、可执行的结论；不要复述图片中已经显而易见的内容，也不要臆测图片中不存在的信息。";
+
+const NO_IMAGE_PROMPT =
+  "本轮没有附带页面截图或图片。如果用户询问当前页面，请不要假装能看到页面内容，" +
+  "应明确说明本轮没有可用截图，并建议用户开启截图或上传图片。";
+
+function buildSystemPrompt(images, contextSummary = "") {
+  const parts = [SYSTEM_PROMPT, images.length ? IMAGE_PROMPT : NO_IMAGE_PROMPT];
+  const summary = String(contextSummary || "").trim().slice(0, 8000);
+  if (summary) {
+    parts.push(
+      "本次会话较早的内容已被压缩为以下摘要。请把它当作已经发生的上下文继续对话，不要直接复述摘要：\n" +
+      summary
+    );
+  }
+  return parts.join("\n\n");
+}
 
 function normalizeBase(baseUrl) {
   const value = String(baseUrl || "").trim().replace(/\/+$/, "");
@@ -213,6 +232,7 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
   const outputLimit = Math.max(1, Number(maxTokens) || 1600);
   const safeImages = Array.isArray(images) ? images.filter(Boolean).slice(0, 5) : [];
   const stream = Boolean(requestOptions.stream);
+  const systemPrompt = buildSystemPrompt(safeImages, requestOptions.contextSummary);
 
   if (format === "anthropic") {
     const key = readApiKey(provider);
@@ -243,7 +263,7 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
           model,
           max_tokens: outputLimit,
           stream,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages
         })
       }
@@ -270,7 +290,7 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
           "x-goog-api-key": key
         },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
           generationConfig: { maxOutputTokens: outputLimit }
         })
@@ -304,7 +324,7 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
       body: JSON.stringify({
         model,
         stream,
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages]
+        messages: [{ role: "system", content: systemPrompt }, ...messages]
       })
     }
   };
@@ -403,6 +423,7 @@ export async function streamProviderChat({
   screenshotDataUrl,
   attachments = [],
   maxTokens = 1600,
+  contextSummary = "",
   onDelta,
   signal
 }) {
@@ -423,7 +444,7 @@ export async function streamProviderChat({
     normalizedMessages,
     images,
     maxTokens,
-    { stream: true }
+    { stream: true, contextSummary }
   );
   const response = await fetch(url, { ...options, signal });
   if (!response.ok) await throwResponseError(response);

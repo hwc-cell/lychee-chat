@@ -1141,7 +1141,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   color: #8a9084;
 }
 .session-action:hover { background: #e9e3d6; color: var(--ink); }
+.session-action:disabled { cursor: not-allowed; opacity: .3; }
+.session-action:disabled:hover { background: transparent; color: inherit; }
 .session-action[data-action="delete"]:hover { color: var(--danger); }
+.session-action[data-action="delete"]:disabled:hover { color: inherit; }
 .session-action svg { width: 11px; height: 11px; }
 .session-rename-input {
   width: 100%;

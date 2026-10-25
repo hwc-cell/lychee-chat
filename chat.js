@@ -10,6 +10,7 @@ const SETTINGS_KEY = "lycheeSettings";
 const SESSIONS_KEY = "lycheeSessions";
 const PREFS_KEY = "lycheePrefs";
 const MAX_HISTORY_MESSAGES = 40;
+const AUTO_COMPRESS_MESSAGE_LIMIT = MAX_HISTORY_MESSAGES - 4;
 const PARAMS = new URLSearchParams(location.search);
 const EMBEDDED = PARAMS.get("embedded") === "1";
 const PAGE_LABEL = PARAMS.get("page") || "";
@@ -112,13 +113,25 @@ function formatTokens(value) {
   return String(value);
 }
 
+function estimateTextTokens(text) {
+  const value = String(text || "");
+  if (!value) return 0;
+  const wide = (value.match(/[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe4f\uff00-\uffef\u3040-\u30ff\uac00-\ud7af]/g) || []).length;
+  const narrow = Math.max(0, value.length - wide);
+  return Math.ceil(wide * 1.2 + narrow / 3.8);
+}
+
 function estimateTokens(session) {
   if (!session) return 0;
+  const lastUserMessage = [...session.messages].reverse().find((message) => message.role === "user");
   return session.messages.reduce((total, message) => {
     if (message.type === "compressed") {
-      return total + Math.ceil((message.summary?.length || 0) / 3);
+      return total + estimateTextTokens(message.summary) + 20;
     }
-    return total + Math.ceil((message.text?.length || 0) / 3) + (message.screenshot ? 900 : 0);
+    const images = message === lastUserMessage
+      ? (message.screenshot ? 1 : 0) + (Array.isArray(message.attachments) ? message.attachments.length : 0)
+      : 0;
+    return total + estimateTextTokens(message.text) + images * 900;
   }, 180);
 }
 
@@ -222,6 +235,7 @@ function serializableSessions() {
             role: message.role,
             text: message.text,
             time: message.time,
+            model: message.model || "",
             screenshot: Boolean(message.screenshot),
             attachments: Array.isArray(message.attachments)
               ? message.attachments.map(({ name, type }) => ({ name, type }))
@@ -247,6 +261,10 @@ function resolveProvider() {
   );
   provider = candidate && model ? candidate : null;
   activeModel = model || null;
+}
+
+function activeModelLabel() {
+  return activeModel ? (activeModel.label || activeModel.id) : "视觉模型";
 }
 
 function updateHeader() {
@@ -390,7 +408,7 @@ function messageMarkup(message) {
     <div class="message assistant"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
       <span class="assistant-avatar"><img src="assets/icon-32.png" alt=""></span>
       <div class="message-body">
-        <div class="message-meta">Lychee-Chat · ${activeModel ? esc(activeModel.label || activeModel.id) : "视觉模型"} · ${esc(message.time || "")}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
+        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
         <div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>
       </div>
     </div>`;
@@ -453,6 +471,7 @@ function renderMessages(scroll = "bottom") {
 function sessionRowMarkup(session) {
   const active = session.id === sessionsState.activeId;
   const editing = session.id === editingSessionId;
+  const busy = session.id === sendingSessionId;
   const count = roleMessages(session).length;
   if (editing) {
     return `
@@ -473,7 +492,7 @@ function sessionRowMarkup(session) {
       <div class="session-actions">
         <button class="session-action" type="button" data-action="pin" data-id="${esc(session.id)}" title="${session.pinned ? "取消置顶" : "置顶"}">${icons.pin}</button>
         <button class="session-action" type="button" data-action="rename" data-id="${esc(session.id)}" title="重命名">${icons.edit}</button>
-        <button class="session-action" type="button" data-action="delete" data-id="${esc(session.id)}" title="删除">${icons.trash}</button>
+        <button class="session-action" type="button" data-action="delete" data-id="${esc(session.id)}" title="${busy ? "回复完成后可删除" : "删除"}"${busy ? " disabled" : ""}>${icons.trash}</button>
       </div>
     </div>`;
 }
@@ -687,6 +706,10 @@ function selectSession(id) {
 }
 
 function deleteSession(id) {
+  if (sendingSessionId === id) {
+    showChatToast("这条会话正在发送或等待回复，请先停止生成或稍后再删除", true);
+    return;
+  }
   const index = sessionsState.items.findIndex((session) => session.id === id);
   if (index === -1) return;
   const wasActive = sessionsState.activeId === id;
@@ -869,14 +892,15 @@ function compressSession(sessionId = sessionsState.activeId, auto = false) {
     updateContextUI();
   }
   showChatToast(auto
-    ? "上下文接近上限，已自动压缩"
+    ? "会话较长或接近上下文上限，已自动压缩"
     : `已压缩 ${olderCount} 条消息`);
 }
 
 function maybeAutoCompress(session) {
   if (!prefs.autoCompress) return;
-  if (roleMessages(session).length < 8) return;
-  if (contextPercent(session) >= prefs.threshold) {
+  const messageCount = roleMessages(session).length;
+  if (messageCount < 8) return;
+  if (messageCount >= AUTO_COMPRESS_MESSAGE_LIMIT || contextPercent(session) >= prefs.threshold) {
     compressSession(session.id, true);
   }
 }
@@ -888,6 +912,7 @@ function ensureAssistantDraft(stream) {
     role: "assistant",
     text: "",
     time: nowTime(),
+    model: stream.modelLabel,
     streaming: true,
     streamId: makeId()
   };
@@ -919,6 +944,7 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
         role: "assistant",
         text: fullText,
         time: nowTime(),
+        model: stream.modelLabel,
         streamId: makeId()
       };
       stream.session.messages.push(stream.message);
@@ -959,7 +985,8 @@ function startChatStream(payload, session) {
     session,
     message: null,
     port: null,
-    finished: false
+    finished: false,
+    modelLabel: activeModelLabel()
   };
   activeStream = stream;
   typingSessionId = session.id;
@@ -1029,6 +1056,14 @@ async function sendMessage() {
   }
   const session = activeSession();
   if (!session) return;
+  if (roleMessages(session).length >= MAX_HISTORY_MESSAGES) {
+    if (prefs.autoCompress) {
+      compressSession(session.id, true);
+    } else {
+      showChatToast("会话消息过多，请先手动压缩上下文或开启自动压缩", true);
+      return;
+    }
+  }
   clearChatError();
 
   const userMessage = {
@@ -1079,9 +1114,11 @@ async function sendMessage() {
   const history = roleMessages(session)
     .slice(-MAX_HISTORY_MESSAGES)
     .map((message) => ({ role: message.role, text: message.text }));
+  const compressed = session.messages.find((message) => message.type === "compressed");
 
   startChatStream({
     messages: history,
+    contextSummary: compressed?.summary || "",
     screenshotDataUrl: screenshotData,
     attachments: attachmentSnapshot.map((attachment) => attachment.dataUrl)
   }, session);
