@@ -1,20 +1,21 @@
 # 加载 Lychee-Chat 到自己的浏览器
 
-本指南介绍如何在没有 Chrome Web Store 版本的情况下，把 Lychee-Chat 作为“已解压的扩展程序”加载到 Chrome 中使用。
+本指南介绍如何在没有 Chrome Web Store 或 AMO 版本的情况下，把 Lychee-Chat 作为本地扩展加载使用。
 
 ## 环境要求
 
-- Chrome 或基于 Chromium 的桌面浏览器
-- Chrome 版本 **116 或更高**
+- Chrome 116 或更高版本，或 Firefox 142 或更高版本
 - 能保留本项目文件夹，不要把加载目录删除或移动
 
-## 方式一：使用 GitHub Release（推荐）
+## Chrome
+
+### 方式一：使用 GitHub Release（推荐）
 
 1. 打开最新版本页面：
 
    https://github.com/hwc-cell/lychee-chat/releases/latest
 
-2. 下载 `lychee-chat-0.2.0.zip`。
+2. 下载 `lychee-chat-0.3.0.zip`。
 3. 解压 ZIP 到一个长期保留的文件夹。
 4. 确认解压后能直接看到 `manifest.json`。如果 ZIP 解压后还有一层同名文件夹，请进入该文件夹。
 5. 打开 Chrome，在地址栏输入：
@@ -40,6 +41,26 @@
 3. 打开 **开发者模式**。
 4. 点击 **加载已解压的扩展程序**。
 5. 选择仓库根目录，也就是直接包含 `manifest.json` 的目录。
+
+## Firefox 本地临时加载
+
+Firefox 可以直接加载未签名的本地扩展，不需要发布到 AMO。临时扩展在 Firefox 完全退出后会被移除，下次启动需要重新加载。
+
+1. 打开 Firefox，地址栏输入：
+
+   ```text
+   about:debugging#/runtime/this-firefox
+   ```
+
+2. 点击 **临时载入附加组件**（Load Temporary Add-on）。
+3. 选择项目根目录中的 `manifest.json`。
+4. 加载成功后，在 Firefox 的扩展菜单中把 Lychee-Chat 固定到工具栏。
+5. 首次加载会打开设置页；选择 **Lychee Demo** 即可离线测试。
+6. 打开普通网页，点击工具栏中的 Lychee-Chat 图标，即可显示聊天浮窗。
+
+Firefox 重启后需要回到 `about:debugging` 重新加载。修改代码后，在已加载的附加组件卡片上点击“重新载入”。
+
+如果你需要重启后仍然保留扩展，需要将 XPI 提交到 AMO；通过审核的签名版本可以持久安装，公开上架情况以 AMO 页面为准。
 
 ## 第一次启动
 

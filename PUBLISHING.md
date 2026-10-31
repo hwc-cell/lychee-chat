@@ -1,6 +1,6 @@
 # Lychee-Chat · Chrome Web Store 发布指南
 
-本文对应版本 `0.2.0`，目标是发布一个 Chrome Manifest V3 扩展。
+本文对应版本 `0.3.0`，目标是发布一个 Chrome Manifest V3 扩展。
 
 ## 1. 本地安装与验收
 
@@ -79,22 +79,22 @@ GitHub Pages 示例：
   4. 会话管理抽屉
   5. 上下文压缩与模型窗口设置
 
-`store/` 目录提供了由当前界面生成的 1280×800 参考图；正式发布前最好在安装扩展后重新截取真实运行画面，尤其是 0.2.0 新增的 Markdown 和上下文窗口界面。
+`store/` 里仍是旧版界面的宣传图，不能直接作为 0.3.0 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
 
 ### 2.4 打包 ZIP
 
 在项目根目录中执行（不要把整个外层文件夹打进去）：
 
 ```bash
-rm -f ../lychee-chat-0.2.0.zip
-zip -r ../lychee-chat-0.2.0.zip . \
+rm -f ../lychee-chat-0.3.0.zip
+zip -r ../lychee-chat-0.3.0.zip . \
   -x "dev-*" "preview-*" "store/*" "PUBLISHING.md" "*.zip" ".DS_Store" "dev-chrome-mock.js"
 ```
 
 检查 ZIP 根目录必须直接看到 `manifest.json`：
 
 ```bash
-unzip -l ../lychee-chat-0.2.0.zip | head -30
+unzip -l ../lychee-chat-0.3.0.zip | head -30
 ```
 
 不要把以下内容发布出去：
@@ -160,7 +160,7 @@ unzip -l ../lychee-chat-0.2.0.zip | head -30
 ### 商店图标与截图
 
 - 图标：上传 `assets/icon-128.png`
-- 截图：上传 `store/store-*.png` 或你重新截取的真实运行图
+- 截图：必须使用 0.3.0 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
 - 不要使用带 API Key、个人聊天或真实用户数据的截图
 
 ## 4. 隐私标签页怎么填

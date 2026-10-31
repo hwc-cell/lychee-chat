@@ -4,6 +4,9 @@ import {
   formatContextWindow,
   normalizeContextWindow
 } from "./model-context.js";
+import { providerIcon } from "./provider-icons.js";
+
+const ext = globalThis.browser ?? globalThis.chrome;
 
 const SETTINGS_KEY = "lycheeSettings";
 const SECRETS_KEY = "lycheeSecrets";
@@ -333,6 +336,7 @@ function renderProviderGrid() {
   $("#providerGrid").innerHTML = ordered.map((provider) => {
     const selected = provider.id === state.activeProviderId;
     const visionModels = (provider.models || []).filter((model) => model.vision === true).length;
+    const icon = providerIcon(provider.id);
     const meta = provider.id === "custom"
       ? (provider.models?.length ? `${provider.models.length} 个模型 · 待确认` : "自定义接口")
       : provider.local
@@ -342,7 +346,11 @@ function renderProviderGrid() {
       <button class="provider-card${selected ? " is-selected" : ""}${provider.id === "custom" ? " is-custom" : ""}"
         type="button" data-provider="${esc(provider.id)}" aria-pressed="${selected}"
         style="--logo-bg:${provider.logoBg};--logo-fg:${provider.logoFg}">
-        <span class="provider-logo">${esc(provider.initial || "+")}</span>
+        <span class="provider-logo">
+          ${icon
+            ? `<img src="${esc(icon)}" alt="">`
+            : `<span class="provider-logo-fallback">${esc(provider.initial || "+")}</span>`}
+        </span>
         <span class="provider-info">
           <span class="provider-name">${esc(provider.name)}</span>
           <span class="provider-sub">${esc(provider.en)}</span>
@@ -471,9 +479,21 @@ function renderDetail() {
   if (!provider) return;
   const status = providerStatus(provider);
 
-  $("#detailLogo").textContent = provider.initial || "+";
+  const icon = providerIcon(provider.id);
   $("#detailLogo").style.setProperty("--logo-bg", provider.logoBg);
   $("#detailLogo").style.setProperty("--logo-fg", provider.logoFg);
+  const detailLogoImage = $("#detailLogoImage");
+  const detailLogoText = $("#detailLogoText");
+  if (icon) {
+    detailLogoImage.src = icon;
+    detailLogoImage.hidden = false;
+    detailLogoText.hidden = true;
+  } else {
+    detailLogoImage.hidden = true;
+    detailLogoImage.removeAttribute("src");
+    detailLogoText.hidden = false;
+    detailLogoText.textContent = provider.initial || "+";
+  }
   $("#detailName").textContent = provider.name;
   $("#detailSub").textContent = providerDetail(provider);
   $("#detailStatus").className = `status-chip ${status.className}`;
@@ -560,7 +580,7 @@ function ensurePermissionFor(provider) {
     return Promise.resolve(false);
   }
   if (KNOWN_HOSTS.has(url.hostname)) return Promise.resolve(true);
-  return chrome.permissions.request({
+  return ext.permissions.request({
     origins: [`${url.protocol}//${url.hostname}/*`]
   });
 }
@@ -585,7 +605,7 @@ function mergeSavedModels(savedModels, baseModels = []) {
 async function loadSettings() {
   let stored = {};
   try {
-    stored = await chrome.storage.local.get([SETTINGS_KEY, SECRETS_KEY, LAUNCHER_KEY]);
+    stored = await ext.storage.local.get([SETTINGS_KEY, SECRETS_KEY, LAUNCHER_KEY]);
   } catch (error) {
     showToast(`读取配置失败：${error.message}`, true);
   }
@@ -680,7 +700,7 @@ async function saveSettings() {
     const granted = await permissionPromise;
     if (!granted) throw new Error("需要允许访问该接口域名才能保存");
     const { settings, secrets } = buildStoredSettings();
-    await chrome.storage.local.set({
+    await ext.storage.local.set({
       [SETTINGS_KEY]: settings,
       [SECRETS_KEY]: secrets
     });
@@ -709,7 +729,7 @@ async function testConnection() {
   try {
     const granted = await permissionPromise;
     if (!granted) throw new Error("需要允许访问该接口域名才能测试");
-    const response = await chrome.runtime.sendMessage({
+    const response = await ext.runtime.sendMessage({
       type: "LYCHEE_TEST_PROVIDER",
       provider: providerDraft(provider),
       model: provider.selectedModel
@@ -770,7 +790,7 @@ async function fetchModels() {
   try {
     const granted = await permissionPromise;
     if (!granted) throw new Error("需要允许访问该接口域名才能获取模型");
-    const response = await chrome.runtime.sendMessage({
+    const response = await ext.runtime.sendMessage({
       type: "LYCHEE_FETCH_MODELS",
       provider: providerDraft(provider)
     });
@@ -1001,7 +1021,7 @@ function bindEvents() {
   $("#showPageLauncher").addEventListener("change", async (event) => {
     const visible = event.target.checked;
     try {
-      await chrome.storage.local.set({ [LAUNCHER_KEY]: visible });
+      await ext.storage.local.set({ [LAUNCHER_KEY]: visible });
       state.showPageLauncher = visible;
       showToast(visible ? "页面荔枝按钮已显示" : "已隐藏页面荔枝按钮，可从工具栏打开");
     } catch (error) {

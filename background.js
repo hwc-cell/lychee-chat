@@ -1,5 +1,7 @@
 import { fetchProviderModels, runProviderChat, streamProviderChat } from "./providers.js";
 
+const ext = globalThis.browser ?? globalThis.chrome;
+
 const SETTINGS_KEY = "lycheeSettings";
 const SECRETS_KEY = "lycheeSecrets";
 
@@ -35,11 +37,11 @@ function chunkText(text) {
   return chunks;
 }
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+ext.runtime.onInstalled.addListener(async (details) => {
   try {
-    const stored = await chrome.storage.local.get(SETTINGS_KEY);
+    const stored = await ext.storage.local.get(SETTINGS_KEY);
     if (!stored[SETTINGS_KEY]) {
-      await chrome.storage.local.set({
+      await ext.storage.local.set({
         [SETTINGS_KEY]: {
           activeProviderId: "demo",
           providers: { demo: DEMO_PROVIDER }
@@ -55,40 +57,40 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     }
   } catch {}
   if (details.reason === "install") {
-    chrome.runtime.openOptionsPage();
+    ext.runtime.openOptionsPage();
   }
 });
 
-chrome.action.onClicked.addListener(async (tab) => {
+ext.action.onClicked.addListener(async (tab) => {
   if (!tab?.id) return;
 
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: "LYCHEE_TOGGLE" });
+    await ext.tabs.sendMessage(tab.id, { type: "LYCHEE_TOGGLE" });
     return;
   } catch {
     // The content script is not on this page yet.
   }
 
   try {
-    await chrome.scripting.executeScript({
+    await ext.scripting.executeScript({
       target: { tabId: tab.id },
       files: ["content.js"]
     });
-    await chrome.action.setBadgeText({ tabId: tab.id, text: "" });
+    await ext.action.setBadgeText({ tabId: tab.id, text: "" });
   } catch (error) {
     console.warn("Lychee-Chat could not be injected:", error);
     await flashBadge(tab.id);
     try {
-      await chrome.action.setTitle({
+      await ext.action.setTitle({
         tabId: tab.id,
         title: "Lychee-Chat 无法在此页面打开，点击查看原因"
       });
       setTimeout(() => {
-        chrome.action.setTitle({ tabId: tab.id, title: "打开 Lychee-Chat" }).catch(() => {});
+        ext.action.setTitle({ tabId: tab.id, title: "打开 Lychee-Chat" }).catch(() => {});
       }, 5000);
     } catch {}
-    chrome.windows.create({
-      url: chrome.runtime.getURL(
+    ext.windows.create({
+      url: ext.runtime.getURL(
         `fallback.html?reason=${encodeURIComponent(error?.message || "注入失败")}&url=${encodeURIComponent(tab.url || "")}`
       ),
       type: "popup",
@@ -101,9 +103,9 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 async function flashBadge(tabId) {
   try {
-    await chrome.action.setBadgeBackgroundColor({ tabId, color: "#b5432d" });
-    await chrome.action.setBadgeText({ tabId, text: "!" });
-    setTimeout(() => chrome.action.setBadgeText({ tabId, text: "" }).catch(() => {}), 1800);
+    await ext.action.setBadgeBackgroundColor({ tabId, color: "#b5432d" });
+    await ext.action.setBadgeText({ tabId, text: "!" });
+    setTimeout(() => ext.action.setBadgeText({ tabId, text: "" }).catch(() => {}), 1800);
   } catch {}
 }
 
@@ -122,7 +124,7 @@ function hostPatternFor(baseUrl) {
 
 async function assertHostPermission(baseUrl) {
   const pattern = hostPatternFor(baseUrl);
-  const granted = await chrome.permissions.contains({ origins: [pattern] });
+  const granted = await ext.permissions.contains({ origins: [pattern] });
   if (!granted) {
     throw new Error("扩展还没有访问该接口域名的权限，请在设置页保存并允许访问。");
   }
@@ -144,7 +146,7 @@ function sanitizeProviderDraft(input) {
 }
 
 async function getActiveProvider() {
-  const { lycheeSettings, lycheeSecrets } = await chrome.storage.local.get([
+  const { lycheeSettings, lycheeSecrets } = await ext.storage.local.get([
     SETTINGS_KEY,
     SECRETS_KEY
   ]);
@@ -199,7 +201,7 @@ async function prepareChatRequest(message) {
 
 async function handleCapture(sender) {
   if (!sender.tab?.windowId) throw new Error("无法确定当前标签页");
-  const dataUrl = await chrome.tabs.captureVisibleTab(sender.tab.windowId, {
+  const dataUrl = await ext.tabs.captureVisibleTab(sender.tab.windowId, {
     format: "jpeg",
     quality: 72
   });
@@ -207,7 +209,7 @@ async function handleCapture(sender) {
   return { dataUrl };
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || typeof message.type !== "string") return;
 
   if (message.type === "LYCHEE_CAPTURE") {
@@ -218,7 +220,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "LYCHEE_OPEN_OPTIONS") {
-    chrome.runtime.openOptionsPage();
+    ext.runtime.openOptionsPage();
     sendResponse({ ok: true });
     return;
   }
@@ -288,7 +290,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-chrome.runtime.onConnect.addListener((port) => {
+ext.runtime.onConnect.addListener((port) => {
   if (port.name !== "lychee-chat-stream") return;
   let controller = null;
   let started = false;

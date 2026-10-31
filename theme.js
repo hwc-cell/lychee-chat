@@ -1,4 +1,5 @@
 (() => {
+  const ext = globalThis.browser ?? globalThis.chrome;
   const KEY = "lycheeTheme";
   const MODES = ["system", "light", "dark"];
   const LABELS = { system: "跟随系统", light: "浅色", dark: "深色" };
@@ -38,7 +39,7 @@
     mode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
     apply();
     try {
-      chrome.storage.local.set({ [KEY]: mode }).catch(() => {});
+      ext.storage.local.set({ [KEY]: mode }).catch(() => {});
     } catch {}
   }
 
@@ -63,10 +64,10 @@
   apply();
 
   try {
-    chrome.storage.local.get(KEY).then((stored) => {
+    ext.storage.local.get(KEY).then((stored) => {
       if (MODES.includes(stored?.[KEY])) setMode(stored[KEY]);
     }).catch(() => {});
-    chrome.storage.onChanged.addListener((changes, area) => {
+    ext.storage.onChanged.addListener((changes, area) => {
       if (area !== "local" || !changes[KEY]) return;
       setMode(changes[KEY].newValue || "system");
     });

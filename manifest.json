@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lychee-Chat",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "在浏览器右上角与视觉模型聊天，每一轮自动附带当前页面截图。",
   "minimum_chrome_version": "116",
   "icons": {
@@ -21,7 +21,21 @@
   },
   "background": {
     "service_worker": "background.js",
+    "scripts": ["background.js"],
     "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "lychee-chat@lycheeledger.cn",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent",
+          "personalCommunications",
+          "authenticationInfo"
+        ]
+      }
+    }
   },
   "options_page": "options.html",
   "permissions": [
@@ -58,13 +72,31 @@
         "chat.html",
         "chat.css",
         "chat.js",
+        "lychee.css",
         "markdown.js",
         "model-context.js",
+        "provider-icons.js",
         "theme.js",
         "themes.css",
         "assets/icon-32.png",
         "assets/icon-48.png",
-        "assets/icon-128.png"
+        "assets/icon-128.png",
+        "assets/providers/claude.png",
+        "assets/providers/deepseek.png",
+        "assets/providers/demo.png",
+        "assets/providers/doubao.png",
+        "assets/providers/gemini.png",
+        "assets/providers/grok.png",
+        "assets/providers/lmstudio.png",
+        "assets/providers/mimo.png",
+        "assets/providers/minimax.png",
+        "assets/providers/moonshot.png",
+        "assets/providers/ollama.png",
+        "assets/providers/openai.png",
+        "assets/providers/openrouter.png",
+        "assets/providers/qwen.png",
+        "assets/providers/siliconflow.png",
+        "assets/providers/zhipu.png"
       ],
       "matches": ["<all_urls>"]
     }

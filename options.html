@@ -14,13 +14,14 @@
   .side-col { justify-content: flex-start; }
   .sidebar-privacy { margin-top: 2px; }
 </style>
+<link rel="stylesheet" href="lychee.css">
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-mark"><img src="assets/icon-128.png" alt=""></div>
-      <div class="brand-text"><strong>Lychee-Chat</strong><span>AI 聊天插件</span></div>
+      <div class="brand-text"><strong>Lychee-Chat</strong><span>AI 视觉对话</span></div>
     </div>
 
     <nav class="nav" aria-label="设置导航">
@@ -37,6 +38,11 @@
       </a>
     </nav>
 
+    <div class="sidebar-motto" aria-hidden="true">
+      <span>Field note · 01</span>
+      <p>先看见，<br>再回答。</p>
+    </div>
+
     <div class="sidebar-bottom">
       <div class="session-mini">
         <div class="session-mini-top"><span class="live-dot"></span><span>当前模型</span><span class="session-chip" id="sidebarStatus">待配置</span></div>
@@ -50,14 +56,14 @@
         <span class="theme-icon" data-theme-icon></span>
         <span data-theme-label>跟随系统</span>
       </button>
-      <p class="version">Lychee-Chat v0.2.0 · Chrome</p>
+      <p class="version">Lychee-Chat v0.3.0 · Chrome / Firefox</p>
     </div>
   </aside>
 
   <main class="main">
     <header class="topbar">
       <div class="topbar-copy">
-        <div class="eyebrow">设置 <span>/</span> <span id="crumb">模型与提供商</span></div>
+        <div class="eyebrow">Lychee <span>·</span> <span id="crumb">视觉设置</span></div>
         <h1>模型与提供商</h1>
         <p>连接视觉模型。保存后，点击浏览器工具栏的 Lychee-Chat 图标开始聊天。</p>
       </div>
@@ -81,7 +87,10 @@
       <div class="panel config-panel">
         <div class="config-head">
           <div class="provider-head">
-            <div class="provider-logo xl" id="detailLogo">C</div>
+            <div class="provider-logo xl" id="detailLogo">
+              <img id="detailLogoImage" alt="" hidden>
+              <span id="detailLogoText">C</span>
+            </div>
             <div>
               <div class="provider-title-line">
                 <h2 id="detailName">Claude</h2>

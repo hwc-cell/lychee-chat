@@ -4,14 +4,14 @@
   <img src="assets/icon-128.png" width="96" height="96" alt="Lychee-Chat">
 </p>
 
-Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点击工具栏图标后，它会在当前网页右上角打开一个可拖动的聊天窗，让你与支持视觉能力的模型讨论当前页面，并可选择在每轮对话中附带页面截图。
+Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。点击工具栏图标后，它会在当前网页右上角打开一个可拖动的聊天窗，让你与支持视觉能力的模型讨论当前页面，并可选择在每轮对话中附带页面截图。
 
-- 当前版本：`0.2.0`
-- 运行环境：Chrome 116 及以上
+- 当前版本：`0.3.0`
+- 运行环境：Chrome 116 及以上；Firefox 142 及以上（本地临时加载或 AMO）
 - 模型模式：自带 API Key（BYOK）或本地模型
 - 许可证：[MIT](LICENSE)
 
-> 第一次安装？查看完整的[本地加载指南](INSTALL.md)。
+> 第一次安装？查看完整的[本地加载指南](INSTALL.md)，包含 Chrome 和 Firefox 的加载步骤。
 
 ## 功能
 
@@ -37,7 +37,7 @@ Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点
 - Claude、GPT、Gemini、Grok、OpenRouter
 - Ollama、LM Studio
 
-另有无需 API Key 的 **Lychee Demo** 离线演示模式，以及可配置的 OpenAI、Anthropic、Gemini、Ollama 兼容自定义接口。
+另有无需 API Key 的 **Lychee Demo** 离线演示模式，以及可配置的 OpenAI、Anthropic、Gemini、Ollama 兼容自定义接口。设置页使用各厂商官方品牌标识，仅用于识别对应提供商；来源与商标声明见 [`assets/providers/SOURCES.md`](assets/providers/SOURCES.md)。
 
 每个模型都有预设上下文窗口，也可以在设置页按模型调整，用于本地用量估算和自动压缩。
 
@@ -58,7 +58,7 @@ Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点
 
 ## 安装
 
-### 从源码加载
+### Chrome
 
 完整步骤与常见问题请见 [INSTALL.md](INSTALL.md)。
 
@@ -72,6 +72,17 @@ Lychee-Chat 是一个面向网页阅读与设计评审的 Chrome AI 助手。点
 3. 打开右上角的“开发者模式”。
 4. 点击“加载已解压的扩展程序”，选择包含 `manifest.json` 的仓库目录。
 5. 首次安装会自动打开设置页；也可以点击工具栏中的 Lychee-Chat 图标，再进入“设置”。
+
+### Firefox
+
+Firefox 可以直接临时加载本地扩展，不需要发布到 AMO：
+
+1. 打开 `about:debugging#/runtime/this-firefox`。
+2. 点击“临时载入附加组件”，选择仓库根目录的 `manifest.json`。
+3. 首次加载会打开设置页，选择 **Lychee Demo** 即可试用。
+4. Firefox 退出后临时扩展会被移除，重新载入即可。
+
+完整说明见 [INSTALL.md](INSTALL.md#firefox-本地临时加载)。
 
 ### 快速试用
 
@@ -124,6 +135,9 @@ manifest.json          Chrome Manifest V3 配置
 background.js          Service Worker、截图、提供商请求与流式转发
 content.js             页面内的 Shadow DOM 浮窗、截图桥接与窗口拖动
 chat.html / chat.js    聊天界面、会话、Markdown 与上下文管理
+lychee.css             温暖植物学视觉系统与聊天界面
+provider-icons.js      提供商官方图标路径映射
+assets/providers/      提供商官方图标与来源说明
 markdown.js            无远程依赖的安全 Markdown 渲染器
 model-context.js       模型上下文窗口预设与格式化
 providers.js           OpenAI / Anthropic / Gemini / Ollama 适配器
@@ -131,6 +145,7 @@ options.html / options.js  提供商、模型与页面入口设置
 theme.js / themes.css  主题与共享样式
 privacy.html           隐私政策
 PUBLISHING.md          Chrome Web Store 发布指南
+PUBLISHING-FIREFOX.md  Firefox AMO 发布指南
 DISCLAIMER.md          免责声明
 LICENSE                MIT 许可证
 ```
@@ -139,7 +154,8 @@ LICENSE                MIT 许可证
 
 ## 已知限制
 
-- Chrome 不允许扩展注入 `chrome://`、Chrome Web Store 等受保护页面。
+- 浏览器内部页面（如 `chrome://`、`about:`、Chrome Web Store）不允许扩展注入界面。
+- Firefox 本地未签名扩展为临时加载，重启后需要重新载入；安装 AMO 签名版本后可持久保留。
 - 部分站点的安全策略可能影响扩展界面或截图流程。
 - 未连接的提供商、失效的模型 ID、网络问题和额度限制都会导致请求失败，错误会显示在聊天窗中。
 - 会话目前仅保存在当前浏览器配置中，不会跨设备同步。

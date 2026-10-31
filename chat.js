@@ -5,6 +5,9 @@ import {
   formatContextWindow,
   normalizeContextWindow
 } from "./model-context.js";
+import { providerIcon } from "./provider-icons.js";
+
+const ext = globalThis.browser ?? globalThis.chrome;
 
 const SETTINGS_KEY = "lycheeSettings";
 const SESSIONS_KEY = "lycheeSessions";
@@ -60,6 +63,9 @@ const messagesEl = $("#messages");
 const sessionTitleEl = $("#sessionTitle");
 const modelNameEl = $("#modelName");
 const modelContextEl = $("#modelContext");
+const modelProviderBadge = $("#modelProviderBadge");
+const modelProviderIcon = $("#modelProviderIcon");
+const modelPip = $("#modelPip");
 const contextPercentEl = $("#contextPercent");
 const contextFill = $("#contextFill");
 const autoLabel = $("#autoLabel");
@@ -246,11 +252,11 @@ function serializableSessions() {
 }
 
 function saveSessions() {
-  chrome.storage.local.set({ [SESSIONS_KEY]: serializableSessions() }).catch(() => {});
+  ext.storage.local.set({ [SESSIONS_KEY]: serializableSessions() }).catch(() => {});
 }
 
 function savePrefs() {
-  chrome.storage.local.set({ [PREFS_KEY]: prefs }).catch(() => {});
+  ext.storage.local.set({ [PREFS_KEY]: prefs }).catch(() => {});
 }
 
 function resolveProvider() {
@@ -272,6 +278,14 @@ function updateHeader() {
   sessionTitleEl.textContent = session?.title || "新会话";
   modelNameEl.textContent = activeModel ? (activeModel.label || activeModel.id) : "未配置模型";
   modelContextEl.textContent = activeModel ? `${formatContextWindow(activeContextLimit())} 上下文` : "窗口 —";
+  const icon = provider ? providerIcon(provider.id) : "";
+  modelProviderBadge.hidden = !icon;
+  modelPip.hidden = Boolean(icon);
+  if (icon) {
+    modelProviderIcon.src = icon;
+  } else {
+    modelProviderIcon.removeAttribute("src");
+  }
   const online = $(".chat-online");
   if (online) online.textContent = provider ? "在线" : "未配置";
   demoNotice.hidden = provider?.format !== "demo";
@@ -419,20 +433,20 @@ function emptyStateMarkup() {
     return `
       <div class="empty-state">
         <div class="empty-orb"><img src="assets/icon-48.png" alt=""></div>
-        <h3>先连接一个视觉模型</h3>
-        <p>Lychee-Chat 会在每一轮对话里附上当前页面截图，因此需要支持图片输入的模型。</p>
+        <h3>先连接一双眼睛</h3>
+        <p>每一轮对话都会附上当前页面截图，因此需要一位能读懂图片的模型。</p>
         <button class="primary-action" type="button" data-action="open-options">打开设置</button>
       </div>`;
   }
   return `
     <div class="empty-state">
       <div class="empty-orb"><img src="assets/icon-48.png" alt=""></div>
-      <h3>看着页面问问题</h3>
-      <p>当前使用 ${esc(activeModel?.label || activeModel?.id || "视觉模型")}，发送时会附上当前标签页截图。</p>
+      <h3>先看见，再回答。</h3>
+      <p>${esc(activeModel?.label || activeModel?.id || "视觉模型")} 已就位。每轮对话都会附上当前标签页截图，布局、文案和细节都可以问我。</p>
       <div class="suggestion-chips">
-        <button type="button" data-suggestion="帮我评审当前页面">评审当前页面</button>
+        <button type="button" data-suggestion="帮我评审当前页面">评审这个页面</button>
         <button type="button" data-suggestion="解释一下这个页面的信息层级">解释信息层级</button>
-        <button type="button" data-suggestion="把这个页面的文案压缩一下">压缩页面文案</button>
+        <button type="button" data-suggestion="把这个页面的文案压缩一下">精简页面文案</button>
       </div>
     </div>`;
 }
@@ -636,9 +650,9 @@ function bindWindowDrag() {
 }
 
 function openOptionsPage() {
-  if (chrome?.runtime?.openOptionsPage) {
+  if (ext?.runtime?.openOptionsPage) {
     try {
-      const result = chrome.runtime.openOptionsPage();
+      const result = ext.runtime.openOptionsPage();
       if (result?.catch) result.catch(() => {
         if (EMBEDDED) postToParent({ type: "open-options" });
         else window.open("options.html", "_blank");
@@ -995,7 +1009,7 @@ function startChatStream(payload, session) {
 
   let port;
   try {
-    port = chrome.runtime.connect({ name: "lychee-chat-stream" });
+    port = ext.runtime.connect({ name: "lychee-chat-stream" });
   } catch (error) {
     finalizeStream(stream, { error: error.message || "无法建立流式连接" });
     return;
@@ -1335,7 +1349,7 @@ function bindEvents() {
   });
 
   try {
-    chrome.storage.onChanged.addListener((changes, area) => {
+    ext.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
       if (changes[SETTINGS_KEY]) {
         settings = changes[SETTINGS_KEY].newValue || null;
@@ -1361,7 +1375,7 @@ async function loadAll() {
     if (pageInfo) pageInfo.textContent = `${PAGE_LABEL} · 发送时附带`;
   }
   try {
-    const stored = await chrome.storage.local.get([SETTINGS_KEY, SESSIONS_KEY, PREFS_KEY]);
+    const stored = await ext.storage.local.get([SETTINGS_KEY, SESSIONS_KEY, PREFS_KEY]);
     settings = stored[SETTINGS_KEY] || null;
     prefs = { ...DEFAULT_PREFS, ...(stored[PREFS_KEY] || {}) };
     const loadedSessions = stored[SESSIONS_KEY];
