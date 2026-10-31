@@ -15,7 +15,7 @@
 
    https://github.com/hwc-cell/lychee-chat/releases/latest
 
-2. 下载 `lychee-chat-0.2.5.zip`。
+2. 下载 `lychee-chat-0.3.1.zip`。
 3. 解压 ZIP 到一个长期保留的文件夹。
 4. 确认解压后能直接看到 `manifest.json`。如果 ZIP 解压后还有一层同名文件夹，请进入该文件夹。
 5. 打开 Chrome，在地址栏输入：
@@ -79,7 +79,8 @@ Firefox 重启后需要回到 `about:debugging` 重新加载。修改代码后�
 3. 需要时修改 Base URL。
 4. 点击“获取列表”同步模型，或手动添加模型 ID。
 5. 勾选确认模型支持视觉能力。
-6. 保存设置。
+6. 需要先检查接口网络时，可以点“测试连接”；未填 API Key 时会只检测端点是否可达，填写 Key 后会验证模型响应。
+7. 保存设置。
 
 使用自定义提供商时，Chrome 会提示允许访问对应接口域名。API Key 只保存在本机浏览器扩展存储中。
 

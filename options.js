@@ -718,11 +718,14 @@ async function saveSettings() {
 
 async function testConnection() {
   const provider = activeProvider();
-  const validation = validateProvider(provider);
-  if (validation) {
-    showToast(validation, true);
+  const baseError = validateBaseUrl(provider);
+  if (baseError) {
+    showToast(baseError, true);
     return;
   }
+  const model = (provider.models || []).find((item) => item.id === provider.selectedModel);
+  const missingKey = keyRequired(provider) && !provider.apiKey?.trim();
+  const canTestModel = provider.format === "demo" || (Boolean(model) && !missingKey);
   const permissionPromise = ensurePermissionFor(provider);
   $("#testBtn").disabled = true;
   $("#testBtn").classList.add("is-loading");
@@ -732,13 +735,29 @@ async function testConnection() {
     const response = await ext.runtime.sendMessage({
       type: "LYCHEE_TEST_PROVIDER",
       provider: providerDraft(provider),
-      model: provider.selectedModel
+      model: canTestModel ? provider.selectedModel : "",
+      probeOnly: !canTestModel
     });
     if (!response?.ok) throw new Error(response?.error || "连接失败");
+
+    if (response.probe) {
+      const warning = Boolean(response.warning);
+      const label = warning ? "接口异常" : "接口可达";
+      $("#detailStatus").className = `status-chip ${warning ? "is-offline" : "is-local"}`;
+      $("#detailStatus").innerHTML = `<span class="dot"></span>${label}`;
+      $("#sidebarStatus").textContent = label;
+      const hints = [];
+      if (missingKey) hints.push("填写 API Key");
+      if (!model) hints.push("选择模型");
+      const hint = hints.length ? `${hints.join("并")} 后可验证模型` : "";
+      showToast([response.message || label, hint].filter(Boolean).join(" · "), warning);
+      return;
+    }
+
     $("#detailStatus").className = "status-chip is-online";
     $("#detailStatus").innerHTML = '<span class="dot"></span>连接正常';
     $("#sidebarStatus").textContent = "连接正常";
-    showToast("连接正常");
+    showToast("连接正常，模型响应可用");
   } catch (error) {
     showToast(error.message || "连接失败", true);
   } finally {
@@ -989,15 +1008,7 @@ function bindEvents() {
     renderDetail();
   });
 
-  $("#testBtn").addEventListener("click", () => {
-    const provider = activeProvider();
-    const validation = validateProvider(provider);
-    if (validation) {
-      showToast(validation, true);
-      return;
-    }
-    testConnection();
-  });
+  $("#testBtn").addEventListener("click", testConnection);
 
   $("#fetchBtn").addEventListener("click", fetchModels);
 

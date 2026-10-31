@@ -6,7 +6,7 @@
 
 Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。点击工具栏图标后，它会在当前网页右上角打开一个可拖动的聊天窗，让你与支持视觉能力的模型讨论当前页面，并可选择在每轮对话中附带页面截图。
 
-- 当前版本：`0.2.5`
+- 当前版本：`0.3.1`
 - 运行环境：Chrome 116 及以上；Firefox 142 及以上（本地临时加载或 AMO）
 - 模型模式：自带 API Key（BYOK）或本地模型
 - 许可证：[MIT](LICENSE)
@@ -38,6 +38,8 @@ Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。�
 - Ollama、LM Studio
 
 另有无需 API Key 的 **Lychee Demo** 离线演示模式，以及可配置的 OpenAI、Anthropic、Gemini、Ollama 兼容自定义接口。设置页使用各厂商官方品牌标识，仅用于识别对应提供商；来源与商标声明见 [`assets/providers/SOURCES.md`](assets/providers/SOURCES.md)。
+
+未填写 API Key 时可以先测试接口是否可达；填写 Key 并选择模型后会发送一条极短消息，验证模型响应。
 
 每个模型都有预设上下文窗口，也可以在设置页按模型调整，用于本地用量估算和自动压缩。
 

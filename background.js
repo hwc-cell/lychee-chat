@@ -130,6 +130,49 @@ async function assertHostPermission(baseUrl) {
   }
 }
 
+function providerNeedsApiKey(provider) {
+  return provider.format !== "demo" && !provider.local && provider.format !== "ollama";
+}
+
+async function probeProviderEndpoint(provider) {
+  const base = String(provider.baseUrl || "").trim().replace(/\/+$/, "");
+  if (!base) throw new Error("请填写 Base URL");
+  const endpoint = provider.format === "ollama"
+    ? `${base.replace(/\/v1$/i, "")}/api/tags`
+    : `${base}/models`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("连接测试超时，请检查网络或接口地址");
+    throw new Error(`网络连接失败：${error.message || "未知错误"}`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const status = Number(response.status) || 0;
+  try { await response.body?.cancel(); } catch {}
+  const authRequired = status === 401 || status === 403;
+  const warning = !authRequired && !response.ok;
+  let message = "接口可达";
+  if (status >= 500) {
+    message = `接口可达，但服务返回 HTTP ${status}`;
+  } else if (status === 404 || status === 405) {
+    message = `接口可达，但模型接口返回 HTTP ${status}，请检查 Base URL`;
+  } else if (!response.ok && !authRequired) {
+    message = `接口可达，但返回 HTTP ${status}`;
+  }
+  return { probe: true, reachable: true, status, authRequired, warning, message };
+}
+
 function sanitizeProviderDraft(input) {
   if (!input || typeof input !== "object") throw new Error("提供商配置无效");
   const format = ["openai", "anthropic", "gemini", "ollama", "demo"].includes(input.format)
@@ -243,12 +286,16 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "LYCHEE_TEST_PROVIDER") {
     (async () => {
       const provider = sanitizeProviderDraft(message.provider);
-      if (!message.model) throw new Error("请先选择一个模型");
       if (provider.format === "demo") return { text: "演示模式可用" };
       await assertHostPermission(provider.baseUrl);
+      const model = String(message.model || "").trim();
+      const hasKey = Boolean(provider.apiKey);
+      if (message.probeOnly || !model || (providerNeedsApiKey(provider) && !hasKey)) {
+        return probeProviderEndpoint(provider);
+      }
       const text = await runProviderChat({
         provider,
-        model: String(message.model),
+        model,
         messages: [{ role: "user", text: "请只回复 OK" }],
         maxTokens: 16
       });
