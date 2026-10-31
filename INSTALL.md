@@ -15,7 +15,7 @@
 
    https://github.com/hwc-cell/lychee-chat/releases/latest
 
-2. 下载 `lychee-chat-0.3.0.zip`。
+2. 下载 `lychee-chat-0.2.5.zip`。
 3. 解压 ZIP 到一个长期保留的文件夹。
 4. 确认解压后能直接看到 `manifest.json`。如果 ZIP 解压后还有一层同名文件夹，请进入该文件夹。
 5. 打开 Chrome，在地址栏输入：

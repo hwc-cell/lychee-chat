@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lychee-Chat",
-  "version": "0.3.0",
+  "version": "0.2.5",
   "description": "在浏览器右上角与视觉模型聊天，每一轮自动附带当前页面截图。",
   "minimum_chrome_version": "116",
   "icons": {
