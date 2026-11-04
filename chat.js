@@ -428,6 +428,21 @@ function messageMarkup(message) {
     </div>`;
 }
 
+function mountStreamCaret(bubble) {
+  bubble.querySelectorAll(".stream-caret").forEach((node) => node.remove());
+  const containers = new Set(["P", "LI", "H1", "H2", "H3", "H4", "H5", "H6", "BLOCKQUOTE", "UL", "OL", "DIV"]);
+  let target = bubble;
+  let node = bubble.lastElementChild;
+  while (node && containers.has(node.tagName)) {
+    target = node;
+    node = node.lastElementChild;
+  }
+  const caret = document.createElement("span");
+  caret.className = "stream-caret";
+  caret.setAttribute("aria-hidden", "true");
+  target.appendChild(caret);
+}
+
 function emptyStateMarkup() {
   if (!provider) {
     return `
@@ -475,6 +490,7 @@ function renderMessages(scroll = "bottom") {
   }
 
   messagesEl.innerHTML = parts.join("");
+  messagesEl.querySelectorAll(".bubble.is-streaming").forEach(mountStreamCaret);
   if (scroll === "bottom") {
     requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
   } else {
@@ -941,6 +957,7 @@ function renderStreamUpdate(stream) {
   const bubble = messagesEl.querySelector(`[data-stream-id="${stream.message.streamId}"] .bubble`);
   if (bubble) {
     bubble.innerHTML = formatAssistantText(stream.message.text);
+    mountStreamCaret(bubble);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   } else {
     renderMessages("bottom");

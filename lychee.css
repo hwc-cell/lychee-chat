@@ -2283,6 +2283,15 @@ html[data-theme] .assistant-avatar img {
   object-fit: contain;
 }
 
+html[data-theme] .message.assistant:has(.bubble.is-streaming) .assistant-avatar {
+  animation: lychee-stream-avatar 1.8s ease-out infinite;
+}
+
+@keyframes lychee-stream-avatar {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 24%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 7px transparent; }
+}
+
 html[data-theme] .message-meta {
   gap: 5px;
   margin-bottom: 6px;
@@ -2314,6 +2323,31 @@ html[data-theme] .message.assistant .bubble {
   border-left: 1px solid var(--line);
   border-radius: 7px 18px 18px 18px;
   background: var(--surface);
+}
+
+html[data-theme] .bubble.is-streaming {
+  position: relative;
+}
+
+html[data-theme] .bubble.is-streaming::after {
+  content: "";
+  position: absolute;
+  right: 13px;
+  bottom: 0;
+  left: 13px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 64%, transparent), transparent);
+  background-size: 240% 100%;
+  opacity: .65;
+  pointer-events: none;
+  animation: lychee-stream-sheen 1.8s linear infinite;
+}
+
+@keyframes lychee-stream-sheen {
+  0% { background-position: 120% 0; opacity: .18; }
+  50% { opacity: .8; }
+  100% { background-position: -120% 0; opacity: .18; }
 }
 
 html[data-theme] .message.user .bubble {
@@ -2674,6 +2708,23 @@ html[data-theme] .streaming-dot {
   height: 5px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+html[data-theme] .stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: .95em;
+  margin-left: 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--accent) 28%, transparent);
+  vertical-align: -.1em;
+  animation: lychee-stream-caret .82s steps(1, end) infinite;
+}
+
+@keyframes lychee-stream-caret {
+  0%, 46% { opacity: 1; }
+  47%, 100% { opacity: 0; }
 }
 
 html[data-theme] .empty-state {
@@ -3626,5 +3677,12 @@ html.embedded .chat-window {
   html[data-theme] .view.is-active,
   html[data-theme] .chat-window {
     animation: none;
+  }
+
+  html[data-theme] .message.assistant:has(.bubble.is-streaming) .assistant-avatar,
+  html[data-theme] .stream-caret,
+  html[data-theme] .bubble.is-streaming::after {
+    animation: none;
+    opacity: 1;
   }
 }
