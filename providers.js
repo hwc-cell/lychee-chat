@@ -129,7 +129,7 @@ export async function fetchProviderModels(provider) {
       (data.data || []).map((model) => ({
         id: model.id,
         label: model.display_name || model.id,
-        vision: true,
+        vision: null,
         contextWindow: inferContextWindow(model)
       }))
     );
@@ -148,7 +148,7 @@ export async function fetchProviderModels(provider) {
         .map((model) => ({
           id: String(model.name || "").replace(/^models\//, ""),
           label: model.displayName || String(model.name || "").replace(/^models\//, ""),
-          vision: true,
+          vision: null,
           contextWindow: inferContextWindow(model)
         }))
     );
@@ -206,10 +206,20 @@ function normalizeMessages(messages) {
     role: message.role === "assistant" ? "assistant" : "user",
     text: String(message.text || "").slice(0, 20000)
   }));
-  if (normalized[normalized.length - 1].role !== "user") {
+  const merged = [];
+  for (const message of normalized) {
+    const previous = merged[merged.length - 1];
+    if (previous && previous.role === message.role) {
+      previous.text = `${previous.text}\n\n${message.text}`.slice(0, 40000);
+    } else {
+      merged.push({ ...message });
+    }
+  }
+  while (merged.length && merged[0].role !== "user") merged.shift();
+  if (!merged.length || merged[merged.length - 1].role !== "user") {
     throw new Error("最后一条消息必须来自用户");
   }
-  return normalized;
+  return merged;
 }
 
 function chatUrlFor(provider, base, model, stream = false) {

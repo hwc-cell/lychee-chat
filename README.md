@@ -6,7 +6,7 @@
 
 Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。点击工具栏图标后，它会在当前网页右上角打开一个可拖动的聊天窗，让你与支持视觉能力的模型讨论当前页面，并可选择在每轮对话中附带页面截图。
 
-- 当前版本：`0.3.5`
+- 当前版本：`0.4.5`
 - 运行环境：Chrome 116 及以上；Firefox 142 及以上（本地临时加载或 AMO）
 - 模型模式：自带 API Key（BYOK）或本地模型
 - 许可证：[MIT](LICENSE)
@@ -137,7 +137,7 @@ manifest.json          Chrome Manifest V3 配置
 background.js          Service Worker、截图、提供商请求与流式转发
 content.js             页面内的 Shadow DOM 浮窗、截图桥接与窗口拖动
 chat.html / chat.js    聊天界面、会话、Markdown 与上下文管理
-lychee.css             温暖植物学视觉系统与聊天界面
+lychee.css             中性产品配色、连续圆角与聊天界面
 provider-icons.js      提供商官方图标路径映射
 assets/providers/      提供商官方图标与来源说明
 markdown.js            无远程依赖的安全 Markdown 渲染器

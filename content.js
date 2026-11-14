@@ -27,15 +27,16 @@
         width: min(416px, calc(100vw - 24px));
         height: min(680px, calc(100vh - 32px));
         overflow: hidden;
-        border: 1px solid #eadad3;
+        border: 1px solid #e5e5e9;
         border-radius: 26px;
-        background: #fffaf4;
-        box-shadow: 0 40px 96px -48px rgba(36, 26, 26, .6), 0 14px 38px -28px rgba(36, 26, 26, .28);
+        corner-shape: squircle;
+        background: #ffffff;
+        box-shadow: 0 40px 96px -48px rgba(0, 0, 0, .44), 0 14px 38px -28px rgba(0, 0, 0, .16);
         transition: height .22s cubic-bezier(.2, .8, .2, 1);
       }
       :host([data-theme="dark"]) .wrap {
-        border-color: #3a2c2f;
-        background: #1c1618;
+        border-color: #343437;
+        background: #1c1c1e;
         box-shadow: 0 44px 110px -42px rgba(0, 0, 0, .9), 0 16px 44px -28px rgba(0, 0, 0, .62);
       }
       .wrap.is-minimized { height: 56px; }
@@ -57,26 +58,26 @@
         height: 52px;
         place-items: center;
         padding: 5px;
-        border: 1px solid #eadad3;
+        border: 1px solid #e5e5e9;
         border-radius: 50%;
-        background: #fffaf4;
-        box-shadow: 0 16px 34px -20px rgba(46, 29, 32, .5);
+        background: #ffffff;
+        box-shadow: 0 16px 34px -20px rgba(0, 0, 0, .28);
         cursor: pointer;
         transition: transform .2s cubic-bezier(.16, 1, .3, 1), background .2s ease, border-color .2s ease;
       }
       :host([data-theme="dark"]) .launcher {
-        border-color: #3a2c2f;
-        background: #1c1618;
+        border-color: #343437;
+        background: #1c1c1e;
         box-shadow: 0 18px 38px -20px rgba(0, 0, 0, .8);
       }
       .launcher:hover {
         transform: translateY(-2px) scale(1.03);
-        border-color: rgba(173, 67, 88, .32);
-        background: #fffdf9;
+        border-color: rgba(179, 59, 77, .35);
+        background: #ffffff;
       }
       :host([data-theme="dark"]) .launcher:hover {
-        border-color: rgba(226, 145, 157, .38);
-        background: #241d1f;
+        border-color: rgba(226, 119, 132, .4);
+        background: #242427;
       }
       .launcher img { width: 40px; height: 40px; border-radius: 50%; object-fit: contain; }
       .launcher .dot {
@@ -85,11 +86,11 @@
         bottom: 4px;
         width: 8px;
         height: 8px;
-        border: 2px solid #fffaf4;
+        border: 2px solid #ffffff;
         border-radius: 50%;
-        background: #ad4358;
+        background: #b33b4d;
       }
-      :host([data-theme="dark"]) .launcher .dot { border-color: #1c1618; background: #e2919d; }
+      :host([data-theme="dark"]) .launcher .dot { border-color: #1c1c1e; background: #e27784; }
       @media (max-width: 480px) {
         .wrap { top: 8px; right: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); border-radius: 22px; }
         .wrap.is-minimized { height: 56px; }
@@ -316,8 +317,6 @@
 
     if (data.type === "capture") {
       const requestId = data.requestId;
-      const wasWrapVisible = !wrap.hidden;
-      const wasLauncherVisible = !launcher.hidden;
       wrap.style.visibility = "hidden";
       launcher.style.visibility = "hidden";
 
@@ -332,8 +331,6 @@
       } finally {
         wrap.style.visibility = "";
         launcher.style.visibility = "";
-        wrap.hidden = !wasWrapVisible;
-        launcher.hidden = !wasLauncherVisible;
       }
 
       postToChat({

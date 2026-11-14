@@ -45,7 +45,7 @@ const icons = {
 let settings = null;
 let provider = null;
 let activeModel = null;
-let sessionsState = { activeId: null, items: [] };
+let sessionsState = { activeId: null, items: [], deleted: {} };
 let prefs = { ...DEFAULT_PREFS };
 let typingSessionId = null;
 let sendingSessionId = null;
@@ -233,9 +233,10 @@ function ensureSession() {
 function serializableSessions() {
   return {
     activeId: sessionsState.activeId,
+    deleted: pruneDeletedSessions(sessionsState.deleted),
     items: sessionsState.items.map((session) => ({
       ...session,
-      messages: session.messages.map((message) => message.type === "compressed"
+      messages: session.messages.filter((message) => message.type === "compressed" || !message.streaming).map((message) => message.type === "compressed"
         ? { type: "compressed", summary: message.summary, count: message.count }
         : {
             role: message.role,
@@ -251,8 +252,136 @@ function serializableSessions() {
   };
 }
 
+let sessionsSaveTail = Promise.resolve();
+
+function pruneDeletedSessions(deleted) {
+  const cutoff = Date.now() - 30 * 86400000;
+  const next = {};
+  for (const [id, timestamp] of Object.entries(deleted || {})) {
+    const at = Number(timestamp) || 0;
+    if (at && at >= cutoff) next[id] = at;
+  }
+  return next;
+}
+
+function mergedDeletedSessions(remote, local) {
+  const next = {};
+  for (const source of [remote || {}, local || {}]) {
+    for (const [id, timestamp] of Object.entries(source)) {
+      next[id] = Math.max(Number(next[id]) || 0, Number(timestamp) || 0);
+    }
+  }
+  return pruneDeletedSessions(next);
+}
+
+function mergeSessionPayloads(remote, local) {
+  const deleted = mergedDeletedSessions(remote?.deleted, local?.deleted);
+  const byId = new Map();
+  const accept = (session) => {
+    if (!session?.id || deleted[session.id]) return;
+    const previous = byId.get(session.id);
+    if (!previous || (Number(session.updatedAt) || 0) >= (Number(previous.updatedAt) || 0)) {
+      byId.set(session.id, session);
+    }
+  };
+  for (const session of remote?.items || []) accept(session);
+  for (const session of local?.items || []) accept(session);
+  const items = [...byId.values()];
+  let activeId = local?.activeId;
+  if (!items.some((session) => session.id === activeId)) {
+    activeId = items.some((session) => session.id === remote?.activeId)
+      ? remote.activeId
+      : (items[0]?.id || null);
+  }
+  return { activeId, items, deleted };
+}
+
+async function persistMergedSessions(snapshot) {
+  const write = async () => {
+    let remote = null;
+    try {
+      remote = (await ext.storage.local.get(SESSIONS_KEY))[SESSIONS_KEY];
+    } catch {}
+    await ext.storage.local.set({ [SESSIONS_KEY]: mergeSessionPayloads(remote, snapshot) });
+  };
+  if (navigator.locks?.request) {
+    await navigator.locks.request("lychee-chat-sessions", write);
+  } else {
+    await write();
+  }
+}
+
 function saveSessions() {
-  ext.storage.local.set({ [SESSIONS_KEY]: serializableSessions() }).catch(() => {});
+  const snapshot = serializableSessions();
+  sessionsSaveTail = sessionsSaveTail
+    .catch(() => {})
+    .then(() => persistMergedSessions(snapshot))
+    .catch(() => {});
+}
+
+function sessionStamp(session) {
+  if (!session) return "";
+  return `${session.id}|${session.updatedAt || 0}|${session.title || ""}|${session.pinned ? 1 : 0}|${session.preview || ""}|${session.messages?.length || 0}`;
+}
+
+function absorbRemoteSessions(remote) {
+  if (!remote || !Array.isArray(remote.items)) return;
+  const activeBefore = activeSession();
+  const stampBefore = sessionStamp(activeBefore);
+  const deleted = mergedDeletedSessions(sessionsState.deleted, remote.deleted);
+  const incoming = remote.items.filter((session) => session?.id && !deleted[session.id]);
+  const map = new Map(sessionsState.items.map((session) => [session.id, session]));
+  const streamingId = activeStream?.session?.id;
+  let listChanged = false;
+
+  for (const id of Object.keys(deleted)) {
+    if (map.delete(id)) listChanged = true;
+  }
+  for (const session of incoming) {
+    if (deleted[session.id]) continue;
+    const local = map.get(session.id);
+    if (!local) {
+      map.set(session.id, session);
+      listChanged = true;
+      continue;
+    }
+    if (session.id === streamingId) continue;
+    if ((Number(session.updatedAt) || 0) > (Number(local.updatedAt) || 0)) {
+      map.set(session.id, session);
+      listChanged = true;
+    }
+  }
+
+  const deletedChanged = JSON.stringify(deleted) !== JSON.stringify(sessionsState.deleted || {});
+  if (!listChanged && !deletedChanged) return;
+
+  sessionsState.deleted = deleted;
+  sessionsState.items = [...map.values()];
+  if (editingSessionId && !sessionsState.items.some((session) => session.id === editingSessionId)) {
+    editingSessionId = null;
+  }
+
+  if (!sessionsState.items.some((session) => session.id === sessionsState.activeId)) {
+    sessionsState.activeId = sessionsState.items.some((session) => session.id === remote.activeId)
+      ? remote.activeId
+      : (sessionsState.items[0]?.id || null);
+  }
+  if (!sessionsState.items.length) {
+    const session = makeSession();
+    sessionsState.items.push(session);
+    sessionsState.activeId = session.id;
+    listChanged = true;
+    saveSessions();
+  }
+
+  if (listChanged) renderSessions();
+  const activeAfter = activeSession();
+  if (stampBefore !== sessionStamp(activeAfter)) {
+    updateHeader();
+    renderMessages("bottom");
+    updateContextUI();
+    updateComposer();
+  }
 }
 
 function savePrefs() {
@@ -577,7 +706,10 @@ function renderSessions() {
       if (editingSessionId !== id) return;
       const session = sessionsState.items.find((item) => item.id === id);
       const title = renameInput.value.trim();
-      if (session && title) session.title = title;
+      if (session && title && title !== session.title) {
+        session.title = title;
+        session.updatedAt = Date.now();
+      }
       editingSessionId = null;
       saveSessions();
       renderSessions();
@@ -718,6 +850,7 @@ function createSession() {
   closeSessions();
   closeContext();
   clearPendingAttachments();
+  clearChatError();
   saveSessions();
   updateAll();
   composerInput.focus();
@@ -725,11 +858,17 @@ function createSession() {
 
 function selectSession(id) {
   if (!sessionsState.items.some((session) => session.id === id)) return;
+  if (id === sessionsState.activeId) {
+    closeSessions();
+    closeContext();
+    return;
+  }
   sessionsState.activeId = id;
   editingSessionId = null;
   closeSessions();
   closeContext();
   clearPendingAttachments();
+  clearChatError();
   saveSessions();
   updateAll();
   composerInput.focus();
@@ -744,6 +883,7 @@ function deleteSession(id) {
   if (index === -1) return;
   const wasActive = sessionsState.activeId === id;
   sessionsState.items.splice(index, 1);
+  sessionsState.deleted[id] = Date.now();
   if (!sessionsState.items.length) {
     createSession();
     showChatToast("会话已删除");
@@ -800,13 +940,16 @@ async function addFiles(files) {
     return;
   }
   const list = [...files];
-  const slots = 4 - pendingAttachments.length;
-  if (slots <= 0) {
+  if (pendingAttachments.length >= 4) {
     showChatToast("最多附带 4 张图片", true);
     return;
   }
   let added = 0;
-  for (const file of list.slice(0, slots)) {
+  for (const file of list) {
+    if (pendingAttachments.length >= 4) {
+      showChatToast("最多附带 4 张图片", true);
+      break;
+    }
     if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
       showChatToast(`${file.name} 不是支持的图片格式`, true);
       continue;
@@ -998,7 +1141,7 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
   updateContextUI();
   updateComposer();
   if (error) {
-    showChatError(error);
+    if (sessionsState.activeId === stream.session.id) showChatError(error);
     showChatToast(`请求失败：${error}`, true);
   } else if (aborted) {
     showChatToast("已停止生成");
@@ -1087,13 +1230,15 @@ async function sendMessage() {
   }
   const session = activeSession();
   if (!session) return;
-  if (roleMessages(session).length >= MAX_HISTORY_MESSAGES) {
-    if (prefs.autoCompress) {
+  const messageCount = roleMessages(session).length;
+  if (prefs.autoCompress) {
+    if (messageCount >= AUTO_COMPRESS_MESSAGE_LIMIT ||
+        (messageCount >= 8 && contextPercent(session) >= prefs.threshold)) {
       compressSession(session.id, true);
-    } else {
-      showChatToast("会话消息过多，请先手动压缩上下文或开启自动压缩", true);
-      return;
     }
+  } else if (messageCount >= MAX_HISTORY_MESSAGES) {
+    showChatToast("会话消息过多，请先手动压缩上下文或开启自动压缩", true);
+    return;
   }
   clearChatError();
 
@@ -1202,6 +1347,7 @@ function bindEvents() {
       if (!session) return;
       if (action.dataset.action === "pin") {
         session.pinned = !session.pinned;
+        session.updatedAt = Date.now();
         saveSessions();
         renderSessions();
         showChatToast(session.pinned ? "会话已置顶" : "已取消置顶");
@@ -1368,6 +1514,9 @@ function bindEvents() {
   try {
     ext.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
+      if (changes[SESSIONS_KEY]) {
+        absorbRemoteSessions(changes[SESSIONS_KEY].newValue || null);
+      }
       if (changes[SETTINGS_KEY]) {
         settings = changes[SETTINGS_KEY].newValue || null;
         resolveProvider();
@@ -1396,10 +1545,12 @@ async function loadAll() {
     settings = stored[SETTINGS_KEY] || null;
     prefs = { ...DEFAULT_PREFS, ...(stored[PREFS_KEY] || {}) };
     const loadedSessions = stored[SESSIONS_KEY];
-    if (loadedSessions?.items?.length) {
+    if (loadedSessions) {
+      const deleted = pruneDeletedSessions(loadedSessions.deleted);
       sessionsState = {
         activeId: loadedSessions.activeId || null,
-        items: loadedSessions.items
+        items: (loadedSessions.items || []).filter((session) => !deleted[session.id]),
+        deleted
       };
     }
     ensureSession();

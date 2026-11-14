@@ -306,6 +306,8 @@ function keyRequired(provider) {
 function showToast(message, warning = false) {
   $("#toastText").textContent = message;
   const toast = $("#toast");
+  const icon = $("#toast .toast-icon");
+  if (icon) icon.innerHTML = warning ? icons.alert : icons.check;
   toast.classList.toggle("is-warning", warning);
   toast.classList.add("is-visible");
   clearTimeout(toastTimer);
@@ -337,8 +339,8 @@ function renderProviderGrid() {
     const selected = provider.id === state.activeProviderId;
     const visionModels = (provider.models || []).filter((model) => model.vision === true).length;
     const icon = providerIcon(provider.id);
-    const meta = provider.id === "custom"
-      ? (provider.models?.length ? `${provider.models.length} 个模型 · 待确认` : "自定义接口")
+    const meta = provider.id === "custom" && !provider.models?.length
+      ? "自定义接口"
       : provider.local
         ? `本地 · ${visionModels} 个视觉模型`
         : `${visionModels} 个视觉模型`;
@@ -449,11 +451,15 @@ function renderModels() {
     $("#modelList").innerHTML = visible.map((model) => modelRowMarkup(provider, model)).join("");
   }
 
-  $("#hiddenNote").textContent = pendingCount
-    ? `${pendingCount} 个模型待确认视觉能力`
-    : state.visionFilter && hiddenCount
-      ? `已隐藏 ${hiddenCount} 个不支持视觉的模型`
-      : "全部模型均支持视觉";
+  $("#hiddenNote").textContent = !models.length
+    ? "还没有模型"
+    : state.visionFilter
+      ? pendingCount
+        ? `${pendingCount} 个模型待确认视觉能力`
+        : hiddenCount
+          ? `已隐藏 ${hiddenCount} 个不支持视觉的模型`
+          : "全部模型均支持视觉"
+      : `已显示全部 ${models.length} 个模型`;
 
   renderSelectedModelCard(provider);
 }
@@ -512,6 +518,7 @@ function renderDetail() {
   $("#baseUrlField").hidden = provider.format === "demo";
   $("#apiKey").value = provider.apiKey || "";
   $("#apiKey").type = "password";
+  $("#revealKey").setAttribute("aria-label", "显示 API Key");
   $("#apiKey").placeholder = provider.apiKey ? "已保存，输入新 Key 可替换" : "输入 API Key";
   $("#baseUrl").value = provider.baseUrl || "";
   $("#baseUrl").placeholder = provider.id === "custom" ? "https://api.example.com/v1" : "";
@@ -579,7 +586,10 @@ function ensurePermissionFor(provider) {
   } catch {
     return Promise.resolve(false);
   }
-  if (KNOWN_HOSTS.has(url.hostname)) return Promise.resolve(true);
+  const localHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const knownWithScheme = KNOWN_HOSTS.has(url.hostname) &&
+    (localHost ? url.protocol === "http:" : url.protocol === "https:");
+  if (knownWithScheme) return Promise.resolve(true);
   return ext.permissions.request({
     origins: [`${url.protocol}//${url.hostname}/*`]
   });
@@ -718,6 +728,7 @@ async function saveSettings() {
 
 async function testConnection() {
   const provider = activeProvider();
+  const isActive = () => activeProvider()?.id === provider.id;
   const baseError = validateBaseUrl(provider);
   if (baseError) {
     showToast(baseError, true);
@@ -743,23 +754,34 @@ async function testConnection() {
     if (response.probe) {
       const warning = Boolean(response.warning);
       const label = warning ? "接口异常" : "接口可达";
-      $("#detailStatus").className = `status-chip ${warning ? "is-offline" : "is-local"}`;
-      $("#detailStatus").innerHTML = `<span class="dot"></span>${label}`;
-      $("#sidebarStatus").textContent = label;
+      if (isActive()) {
+        $("#detailStatus").className = `status-chip ${warning ? "is-offline" : "is-local"}`;
+        $("#detailStatus").innerHTML = `<span class="dot"></span>${label}`;
+        $("#sidebarStatus").textContent = label;
+      }
       const hints = [];
       if (missingKey) hints.push("填写 API Key");
       if (!model) hints.push("选择模型");
       const hint = hints.length ? `${hints.join("并")} 后可验证模型` : "";
-      showToast([response.message || label, hint].filter(Boolean).join(" · "), warning);
+      const prefix = isActive() ? "" : `${provider.name}：`;
+      showToast(`${prefix}${[response.message || label, hint].filter(Boolean).join(" · ")}`, warning);
       return;
     }
 
-    $("#detailStatus").className = "status-chip is-online";
-    $("#detailStatus").innerHTML = '<span class="dot"></span>连接正常';
-    $("#sidebarStatus").textContent = "连接正常";
-    showToast("连接正常，模型响应可用");
+    if (isActive()) {
+      $("#detailStatus").className = "status-chip is-online";
+      $("#detailStatus").innerHTML = '<span class="dot"></span>连接正常';
+      $("#sidebarStatus").textContent = "连接正常";
+    }
+    showToast(isActive() ? "连接正常，模型响应可用" : `${provider.name}：连接正常，模型响应可用`);
   } catch (error) {
-    showToast(error.message || "连接失败", true);
+    if (isActive()) {
+      $("#detailStatus").className = "status-chip is-offline";
+      $("#detailStatus").innerHTML = '<span class="dot"></span>测试失败';
+      $("#sidebarStatus").textContent = "测试失败";
+    }
+    const prefix = isActive() ? "" : `${provider.name}：`;
+    showToast(`${prefix}${error.message || "连接失败"}`, true);
   } finally {
     $("#testBtn").disabled = false;
     $("#testBtn").classList.remove("is-loading");
@@ -814,16 +836,21 @@ async function fetchModels() {
       provider: providerDraft(provider)
     });
     if (!response?.ok) throw new Error(response?.error || "获取模型失败");
+    const stillActive = activeProvider()?.id === provider.id;
     mergeFetchedModels(provider, response.models || []);
     markDirty();
-    renderModels();
     renderProviderGrid();
-    updateSidebar(provider);
+    if (stillActive) {
+      renderModels();
+      updateSidebar(provider);
+    }
     const pending = (provider.models || []).filter((model) => model.vision === null).length;
-    showToast(`已获取 ${(response.models || []).length} 个模型${pending ? "，请确认未知模型的视觉能力" : ""}`);
+    const prefix = stillActive ? "" : `${provider.name}：`;
+    showToast(`${prefix}已获取 ${(response.models || []).length} 个模型${pending ? "，请确认未知模型的视觉能力" : ""}`);
   } catch (error) {
-    renderModels();
-    showToast(error.message || "获取模型失败", true);
+    if (activeProvider()?.id === provider.id) renderModels();
+    const prefix = activeProvider()?.id === provider.id ? "" : `${provider.name}：`;
+    showToast(`${prefix}${error.message || "获取模型失败"}`, true);
   } finally {
     $("#fetchBtn").disabled = false;
     $("#fetchBtn").classList.remove("is-loading");
@@ -948,6 +975,12 @@ function bindEvents() {
     showToast(`上下文窗口已设为 ${formatContextWindow(normalized)}`);
     return true;
   }
+
+  $("#selectedModelCard").addEventListener("input", (event) => {
+    if (!event.target.matches("#contextWindowInput")) return;
+    state.dirty = true;
+    updateSaveState();
+  });
 
   $("#selectedModelCard").addEventListener("change", (event) => {
     if (!event.target.matches("#contextWindowInput")) return;
