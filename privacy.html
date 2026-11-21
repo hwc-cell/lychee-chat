@@ -150,7 +150,7 @@
   <div class="meta">
     <span>生效日期：2026-11-21</span>
     <span>适用产品：Lychee-Chat 浏览器扩展（Chrome / Firefox）</span>
-    <span>版本：0.5.7</span>
+    <span>版本：0.5.8</span>
   </div>
 
   <article>
@@ -185,7 +185,7 @@
       <h2>4. 数据发送给谁</h2>
       <p>当你发送消息时，Lychee-Chat 会把该轮对话文本、按需附带的页面截图、你主动上传的图片附件和必要的请求参数发送到你选择的提供商 API。你的 API Key 作为身份凭证随请求发送给该提供商。</p>
       <p>预置提供商可能包括：月之暗面、DeepSeek、阿里云百炼、智谱、豆包/火山方舟、MiniMax、小米 MiMo、硅基流动、Anthropic、OpenAI、Google Gemini、xAI、OpenRouter，以及本地运行的 Ollama 或 LM Studio。自定义提供商的地址由你填写。</p>
-      <p>当你主动开启 DeepSeek 联网搜索时，DeepSeek 会根据你的提问在服务端生成搜索、检索公开网页并生成带引用的回答。搜索请求和结果由 DeepSeek 处理，Lychee-Chat 不会把搜索请求发送给开发者服务器，也不会接收或保存 DeepSeek 的搜索记录。回答中的引用来源和服务端工具调用元数据会随会话保存在本机，以便继续多轮对话。</p>
+      <p>当你主动开启 DeepSeek 联网搜索时，扩展会从当前问题生成检索词并发送到 DeepSeek Search API；返回的网页结果会交给模型用于本轮回答。检索词和搜索结果由你选择的 DeepSeek 接口处理，Lychee-Chat 开发者服务器不接收这些内容。回答中展示的来源会随会话保存在本机。</p>
       <p>这些第三方服务会按照各自的隐私政策和服务条款处理数据。使用前请阅读对应提供商的条款。Lychee-Chat 不控制第三方的处理方式。</p>
       <p>内置的“Lychee Demo”演示模式不会请求任何外部接口，只返回本地预设的演示回复。</p>
     </section>

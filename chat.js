@@ -813,8 +813,8 @@ function updateWebSearchUI() {
   webSearchToggle.classList.toggle("is-on", on);
   webSearchToggle.setAttribute("aria-pressed", String(on));
   webSearchToggle.title = on
-    ? "DeepSeek 联网搜索已开启，由模型决定本轮是否搜索"
-    : "开启 DeepSeek 联网搜索";
+    ? "联网搜索已开启：会先调用 DeepSeek Search API，再让模型基于结果回答"
+    : "开启联网搜索（调用 DeepSeek Search API，可能产生少量搜索费用）";
 }
 
 function updateScreenshotUI() {
