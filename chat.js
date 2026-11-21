@@ -21,6 +21,7 @@ const PAGE_LABEL = PARAMS.get("page") || "";
 const DEFAULT_PREFS = {
   screenshotOn: true,
   webSearchOn: false,
+  thinkingOn: false,
   autoCompress: true,
   threshold: 70,
   strategy: "摘要较早消息"
@@ -92,6 +93,7 @@ const shotChip = $("#shotChip");
 const captureToggle = $("#captureToggle");
 const captureLabel = $("#captureLabel");
 const webSearchToggle = $("#webSearchToggle");
+const thinkingToggle = $("#thinkingToggle");
 const chatToast = $("#chatToast");
 const minimizeButton = $("#minimizeBtn");
 const demoNotice = $("#demoNotice");
@@ -766,6 +768,7 @@ function updateHeader() {
   if (online) online.textContent = provider ? "在线" : "未配置";
   demoNotice.hidden = provider?.format !== "demo";
   updateWebSearchUI();
+  updateThinkingUI();
   document.title = `Lychee-Chat — ${session?.title || "新会话"}`;
 }
 
@@ -815,6 +818,21 @@ function updateWebSearchUI() {
   webSearchToggle.title = on
     ? "联网搜索已开启：会先调用 DeepSeek Search API，再让模型基于结果回答"
     : "开启联网搜索（调用 DeepSeek Search API，可能产生少量搜索费用）";
+}
+
+function deepseekThinkingAvailable() {
+  return provider?.id === "deepseek" && provider?.format === "openai";
+}
+
+function updateThinkingUI() {
+  const available = deepseekThinkingAvailable();
+  const on = available && Boolean(prefs.thinkingOn);
+  thinkingToggle.hidden = !available;
+  thinkingToggle.classList.toggle("is-on", on);
+  thinkingToggle.setAttribute("aria-pressed", String(on));
+  thinkingToggle.title = on
+    ? "DeepSeek 深度思考已开启（速度更慢，消耗更多 Token）"
+    : "开启 DeepSeek 深度思考（速度更慢，消耗更多 Token）";
 }
 
 function updateScreenshotUI() {
@@ -949,7 +967,7 @@ function messageMarkup(message) {
     <div class="message assistant"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
       <span class="assistant-avatar"><img src="assets/icon-32.png" alt=""></span>
       <div class="message-body">
-        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
+        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.thinking ? '<span class="thinking-live">思考中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
         <div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>
         ${messageSourcesMarkup(message)}
       </div>
@@ -1487,6 +1505,7 @@ function ensureAssistantDraft(stream) {
     model: stream.modelLabel,
     streaming: true,
     searching: false,
+    thinking: false,
     streamId: makeId(),
     sources: []
   };
@@ -1528,6 +1547,7 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
   if (stream.message) {
     stream.message.streaming = false;
     stream.message.searching = false;
+    stream.message.thinking = false;
   }
   if (error && stream.message && /(^|\n)\s*<tool_call>/i.test(stream.message.text)) {
     stream.session.messages = stream.session.messages.filter((message) => message !== stream.message);
@@ -1589,9 +1609,16 @@ function startChatStream(payload, session) {
     if (message.type === "delta") {
       const delta = typeof message.text === "string" ? message.text : "";
       if (!delta) return;
+      const wasThinking = Boolean(stream.message?.thinking);
       ensureAssistantDraft(stream);
+      stream.message.thinking = false;
       stream.message.text += delta;
-      renderStreamUpdate(stream);
+      if (wasThinking) renderMessages("bottom");
+      else renderStreamUpdate(stream);
+    } else if (message.type === "thinking-start") {
+      ensureAssistantDraft(stream);
+      stream.message.thinking = true;
+      if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
     } else if (message.type === "search-start") {
       ensureAssistantDraft(stream);
       stream.message.searching = true;
@@ -1724,7 +1751,8 @@ async function sendMessage() {
     contextSummary: compressed?.summary || "",
     screenshotDataUrl: screenshotData,
     attachments: attachmentSnapshot.map((attachment) => attachment.dataUrl),
-    webSearch: deepseekWebSearchAvailable() && Boolean(prefs.webSearchOn)
+    webSearch: deepseekWebSearchAvailable() && Boolean(prefs.webSearchOn),
+    thinking: deepseekThinkingAvailable() && Boolean(prefs.thinkingOn)
   }, session);
 }
 
@@ -1882,6 +1910,11 @@ function bindEvents() {
     savePrefs();
     updateWebSearchUI();
   });
+  thinkingToggle.addEventListener("click", () => {
+    prefs.thinkingOn = !prefs.thinkingOn;
+    savePrefs();
+    updateThinkingUI();
+  });
 
   messagesEl.addEventListener("click", (event) => {
     const copyButton = event.target.closest("[data-copy-code]");
@@ -2009,6 +2042,7 @@ function bindEvents() {
         prefs = { ...DEFAULT_PREFS, ...(changes[PREFS_KEY].newValue || {}) };
         updateScreenshotUI();
         updateWebSearchUI();
+        updateThinkingUI();
         updateContextUI();
       }
     });

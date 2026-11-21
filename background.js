@@ -206,7 +206,7 @@ function cleanDeepseekQuery(text) {
   return String(text || "")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/^(?:(?:请|麻烦|帮我|帮忙|给我|继续|重新|再搜一下|再搜索|再查一下|联网搜索|联网|搜索|搜一下|再)[\s：:，,、]*)+/i, "")
+    .replace(/^(?:(?:你(?:帮我|帮忙)?搜(?:一下|索)?|你查(?:一下)?|可以(?:帮我|帮忙)?搜(?:一下|索)?|请|麻烦|帮我|帮忙|给我|继续|重新|再搜一下|再搜索|再查一下|联网搜索|联网|搜索|搜一下|搜一搜|再)[\s：:，,、]*)+/i, "")
     .trim();
 }
 
@@ -268,6 +268,9 @@ async function prepareChatRequest(message) {
     : "";
   const webSearch = message.webSearch === true && supportsDeepSeekWebSearch(provider, provider.selectedModel);
   const searchIntent = webSearch ? deepseekSearchIntent(message.messages) : { query: "", question: "" };
+  const thinking = provider.id === "deepseek" && (provider.format || "openai") === "openai"
+    ? message.thinking === true
+    : null;
   return {
     provider,
     demo: false,
@@ -278,7 +281,8 @@ async function prepareChatRequest(message) {
     contextSummary,
     webSearch,
     searchQuery: searchIntent.query,
-    searchQuestion: searchIntent.question
+    searchQuestion: searchIntent.question,
+    thinking
   };
 }
 
@@ -369,7 +373,8 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
         screenshotDataUrl: prepared.screenshotDataUrl,
         attachments: prepared.attachments,
         maxTokens: 1600,
-        searchContext
+        searchContext,
+        thinking: prepared.thinking
       });
       return {
         text,
@@ -433,6 +438,7 @@ ext.runtime.onConnect.addListener((port) => {
           post({ type: "sources", sources: search.sources });
           searchContext = search.context;
         }
+        if (prepared.thinking) post({ type: "thinking-start" });
         const text = await streamProviderChat({
           provider: prepared.provider,
           model: prepared.model,
@@ -442,6 +448,7 @@ ext.runtime.onConnect.addListener((port) => {
           contextSummary: prepared.contextSummary,
           webSearch: false,
           searchContext,
+          thinking: prepared.thinking,
           maxTokens: 1600,
           signal: controller.signal,
           onDelta: (delta) => post({ type: "delta", text: delta }),

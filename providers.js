@@ -373,7 +373,9 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
     stream,
     messages: [{ role: "system", content: systemPrompt }, ...messages]
   };
-  if (provider.id === "deepseek" && (webSearch || searchContext)) {
+  if (provider.id === "deepseek" && typeof requestOptions.thinking === "boolean") {
+    body.thinking = { type: requestOptions.thinking ? "enabled" : "disabled" };
+  } else if (provider.id === "deepseek" && (webSearch || searchContext)) {
     body.thinking = { type: "disabled" };
   }
   if (webSearch) {
@@ -467,7 +469,7 @@ function extractText(format, data) {
   return data.choices?.[0]?.text || "";
 }
 
-export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600, webSearch = false, searchContext = "" }) {
+export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600, webSearch = false, searchContext = "", thinking = null }) {
   if (!model) throw new Error("还没有选择模型");
   const normalizedMessages = normalizeMessages(messages);
   const images = [];
@@ -477,7 +479,7 @@ export async function runProviderChat({ provider, model, messages, screenshotDat
     const image = parseDataUrl(attachment);
     if (image) images.push(image);
   }
-  const { url, options } = buildRequest(provider, model, normalizedMessages, images, maxTokens, { webSearch, searchContext });
+  const { url, options } = buildRequest(provider, model, normalizedMessages, images, maxTokens, { webSearch, searchContext, thinking });
   const data = await fetchJson(url, options, 90000);
   if (data.error) {
     throw new Error(data.error.message || "模型请求失败");
@@ -592,6 +594,7 @@ export async function streamProviderChat({
   contextSummary = "",
   webSearch = false,
   searchContext = "",
+  thinking = null,
   onDelta,
   onSources,
   onServerToolCalls,
@@ -615,7 +618,7 @@ export async function streamProviderChat({
     normalizedMessages,
     images,
     maxTokens,
-    { stream: true, contextSummary, webSearch, searchContext }
+    { stream: true, contextSummary, webSearch, searchContext, thinking }
   );
   const response = await fetch(url, { ...options, signal });
   if (!response.ok) await throwResponseError(response);
