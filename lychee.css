@@ -417,17 +417,7 @@ html[data-theme] .topbar::before {
 }
 
 html[data-theme] .topbar::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  right: 32px;
-  bottom: 17px;
-  width: 70px;
-  height: 32px;
-  background-image: radial-gradient(var(--rind) 1.3px, transparent 1.4px);
-  background-size: 8px 8px;
-  opacity: .48;
-  pointer-events: none;
+  display: none;
 }
 
 html[data-theme] .topbar > * {
@@ -816,7 +806,7 @@ html[data-theme] .provider-sub {
   overflow: hidden;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 9.5px;
   letter-spacing: .04em;
   text-transform: none;
   text-overflow: ellipsis;
@@ -830,7 +820,7 @@ html[data-theme] .provider-meta {
   margin-top: 3px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 9.5px;
+  font-size: 10px;
   letter-spacing: .005em;
   white-space: nowrap;
 }
@@ -1019,7 +1009,7 @@ html[data-theme] .field-label {
   margin-bottom: 8px;
   color: var(--ink-2);
   font-family: var(--font);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 650;
   letter-spacing: .01em;
   text-transform: none;
@@ -1032,7 +1022,7 @@ html[data-theme] .field-label label {
 html[data-theme] .field-note {
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 500;
   letter-spacing: .015em;
 }
@@ -1083,7 +1073,7 @@ html[data-theme] .hint {
   margin-top: 8px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 9.5px;
   line-height: 1.65;
   letter-spacing: .005em;
 }
@@ -1101,11 +1091,20 @@ html[data-theme] .model-list {
   max-height: 292px;
   border: 0;
   background: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html[data-theme] .model-list:hover {
   scrollbar-color: var(--line-strong) transparent;
 }
 
 html[data-theme] .model-list::-webkit-scrollbar-thumb {
   border-radius: 999px;
+  background: transparent;
+}
+
+html[data-theme] .model-list:hover::-webkit-scrollbar-thumb {
   background: var(--line-strong);
 }
 
@@ -1160,7 +1159,7 @@ html[data-theme] .model-row.is-selected .radio::after {
 
 html[data-theme] .model-title {
   gap: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 650;
   letter-spacing: -.005em;
 }
@@ -1168,7 +1167,7 @@ html[data-theme] .model-title {
 html[data-theme] .model-id {
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 8.5px;
 }
 
 html[data-theme] .model-meta-line {
@@ -1362,7 +1361,7 @@ html[data-theme] .vision-panel h3 {
 html[data-theme] .vision-panel > p {
   color: var(--header-muted);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: 10.5px;
   line-height: 1.7;
   letter-spacing: .008em;
 }
@@ -1412,7 +1411,7 @@ html[data-theme] .vision-state {
   border-top-color: var(--header-line);
   color: #9ed7ad;
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
   letter-spacing: .005em;
 }
 
@@ -1536,7 +1535,7 @@ html[data-theme] .page-entry-head p,
 html[data-theme] .page-entry-foot {
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 9px;
   line-height: 1.6;
 }
 
@@ -1553,7 +1552,7 @@ html[data-theme] .privacy-note {
   background: var(--surface);
   color: var(--muted);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 9px;
   line-height: 1.7;
   letter-spacing: .003em;
 }
@@ -1585,7 +1584,7 @@ html[data-theme] .panel-footer {
 html[data-theme] .footer-note {
   color: var(--faint);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 9.5px;
   letter-spacing: .004em;
 }
 
@@ -1899,6 +1898,8 @@ html[data-theme] .toast.is-warning .toast-icon {
 html[data-theme] .chat-window {
   width: 416px;
   height: min(680px, calc(100vh - 128px));
+  container-name: chat;
+  container-type: size;
   border: 1px solid var(--line);
   border-radius: 26px;
   background: var(--paper);
@@ -1966,10 +1967,12 @@ html[data-theme] .chat-logo img {
 }
 
 html[data-theme] .chat-name {
+  min-width: 0;
   font-family: var(--font);
   font-size: 13.5px;
   font-weight: 700;
   letter-spacing: -.025em;
+  white-space: nowrap;
 }
 
 html[data-theme] .chat-online {
@@ -1982,7 +1985,7 @@ html[data-theme] .chat-online {
   background: var(--leaf-soft);
   color: var(--leaf-strong);
   font-family: var(--font);
-  font-size: 7.5px;
+  font-size: 8px;
   letter-spacing: .02em;
   text-transform: none;
 }
@@ -2057,7 +2060,7 @@ html[data-theme] .model-line {
   margin-top: 5px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 9px;
   letter-spacing: .006em;
 }
 
@@ -2107,7 +2110,7 @@ html[data-theme] .model-settings {
   border-radius: 999px;
   color: var(--accent);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
   transition: background .16s ease;
 }
 
@@ -2169,7 +2172,7 @@ html[data-theme] .context-track > span.is-danger {
 html[data-theme] .context-auto {
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
   letter-spacing: .005em;
 }
 
@@ -2232,11 +2235,20 @@ html[data-theme] .chat-notice.error-notice #errorNoticeClose {
 html[data-theme] .messages {
   padding: 17px 15px 14px;
   background: var(--paper);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html[data-theme] .messages:hover {
   scrollbar-color: var(--line-strong) transparent;
 }
 
 html[data-theme] .messages::-webkit-scrollbar-thumb {
   border-radius: 999px;
+  background: transparent;
+}
+
+html[data-theme] .messages:hover::-webkit-scrollbar-thumb {
   background: var(--line-strong);
 }
 
@@ -2247,7 +2259,7 @@ html[data-theme] .msg-date {
   margin: 2px 0 18px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 550;
   letter-spacing: .055em;
   text-transform: none;
@@ -2307,7 +2319,7 @@ html[data-theme] .message-meta {
   margin-bottom: 6px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 9px;
+  font-size: 9.5px;
   letter-spacing: .015em;
 }
 
@@ -2321,8 +2333,8 @@ html[data-theme] .bubble {
   border-radius: 7px 18px 18px 18px;
   background: var(--surface);
   color: var(--ink-2);
-  font-size: 12.5px;
-  line-height: 1.75;
+  font-size: 13px;
+  line-height: 1.72;
   letter-spacing: .002em;
   box-shadow: 0 10px 24px -23px rgba(0, 0, 0, .16);
 }
@@ -2366,7 +2378,7 @@ html[data-theme] .message.user .bubble {
   border-radius: 18px 18px 6px 18px;
   background: var(--user-bubble);
   color: var(--user-bubble-ink);
-  font-size: 12.5px;
+  font-size: 13px;
   box-shadow: 0 12px 26px -22px rgba(0, 0, 0, .26);
 }
 
@@ -2806,7 +2818,7 @@ html[data-theme] .empty-state p {
   margin: 10px 0 19px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: 10.5px;
   line-height: 1.7;
   letter-spacing: .003em;
 }
@@ -2974,15 +2986,15 @@ html[data-theme] .composer-box {
 }
 
 html[data-theme] .composer-box:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 7%, transparent), 0 7px 18px -17px rgba(0, 0, 0, .18);
+  border-color: color-mix(in srgb, var(--ink) 42%, var(--line-strong));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 6%, transparent), 0 7px 18px -17px rgba(0, 0, 0, .18);
 }
 
 html[data-theme] .composer-box textarea {
   padding: 6px 0;
   color: var(--ink);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.65;
 }
 
@@ -3045,14 +3057,14 @@ html[data-theme] .composer-meta {
   margin-top: 8px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
   letter-spacing: .005em;
 }
 
 html[data-theme] .capture-toggle {
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
 }
 
 html[data-theme] .capture-toggle .status-dot {
@@ -3183,11 +3195,20 @@ html[data-theme] .session-search input::placeholder {
 
 html[data-theme] .session-groups {
   margin-top: 13px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+html[data-theme] .session-groups:hover {
   scrollbar-color: var(--line-strong) transparent;
 }
 
 html[data-theme] .session-groups::-webkit-scrollbar-thumb {
   border-radius: 999px;
+  background: transparent;
+}
+
+html[data-theme] .session-groups:hover::-webkit-scrollbar-thumb {
   background: var(--line-strong);
 }
 
@@ -3195,7 +3216,7 @@ html[data-theme] .session-group-label {
   margin: 14px 5px 7px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 7.5px;
+  font-size: 8px;
   font-weight: 650;
   letter-spacing: .09em;
   text-transform: uppercase;
@@ -3226,7 +3247,7 @@ html[data-theme] .session-main {
 html[data-theme] .session-row-title {
   color: var(--ink-2);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 650;
   letter-spacing: -.002em;
 }
@@ -3239,7 +3260,7 @@ html[data-theme] .session-row-preview {
   margin-top: 3px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 8px;
+  font-size: 8.5px;
 }
 
 html[data-theme] .session-row.is-active .session-row-preview,
@@ -3251,7 +3272,7 @@ html[data-theme] .session-row-meta {
   margin-top: 5px;
   color: var(--faint);
   font-family: var(--font);
-  font-size: 7.5px;
+  font-size: 8px;
 }
 
 html[data-theme] .pin-mark {
@@ -3560,7 +3581,7 @@ html.embedded .chat-window {
   box-shadow: none;
 }
 
-@media (max-height: 740px) {
+@container chat (max-height: 740px) {
   html[data-theme] .messages {
     padding-top: 10px;
   }
@@ -3693,13 +3714,15 @@ html.embedded .chat-window {
   }
 }
 
+@media (max-width: 430px) {
+  html[data-theme] .chat-online {
+    display: none;
+  }
+}
+
 @media (max-width: 380px) {
   html[data-theme] .provider-grid {
     grid-template-columns: 1fr;
-  }
-
-  html[data-theme] .chat-online {
-    display: none;
   }
 
   html[data-theme] .chat-brand {
