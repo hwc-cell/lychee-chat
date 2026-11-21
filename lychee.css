@@ -4326,32 +4326,83 @@ html[data-theme="dark"] .search-live {
   50% { opacity: 1; }
 }
 
-html[data-theme] .thinking-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: 5px;
-  padding: 1px 6px;
-  border-radius: 999px;
+html[data-theme] .thinking-block {
+  margin: 0 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: var(--surface-2);
-  color: var(--ink-2);
-  font-size: 6.5px;
-  font-weight: 650;
-  vertical-align: 1px;
+  overflow: hidden;
 }
 
-html[data-theme] .thinking-live::before {
-  content: "";
+html[data-theme] .thinking-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 6px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 8px;
+  font-weight: 600;
+  text-align: left;
+}
+
+html[data-theme] .thinking-head > svg:first-child {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--accent);
+}
+
+html[data-theme] .thinking-chev {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  margin-left: auto;
+  transition: transform .18s ease;
+}
+
+html[data-theme] .thinking-block.is-open .thinking-chev {
+  transform: rotate(180deg);
+}
+
+html[data-theme] .thinking-block.is-live .thinking-head {
+  color: var(--ink-2);
+}
+
+html[data-theme] .thinking-dot {
   width: 4px;
   height: 4px;
+  flex: none;
   border-radius: 50%;
   background: var(--accent);
   animation: searchPulse 1s ease-in-out infinite;
 }
 
+html[data-theme] .thinking-body {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 0 9px 7px;
+  border-top: 1px solid var(--line-soft);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+html[data-theme] .thinking-copy {
+  padding-top: 7px;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 9px;
+  line-height: 1.68;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-theme] .search-live::before,
-  html[data-theme] .thinking-live::before {
+  html[data-theme] .thinking-dot {
     animation: none;
   }
 }

@@ -282,7 +282,9 @@ function serializableSessions() {
               : [],
             serverToolCalls: Array.isArray(message.serverToolCalls) && message.serverToolCalls.length
               ? message.serverToolCalls
-              : undefined
+              : undefined,
+            reasoning: message.reasoning ? String(message.reasoning) : undefined,
+            reasoningOpen: message.reasoning ? Boolean(message.reasoningOpen) : undefined
           })
     }))
   };
@@ -936,7 +938,26 @@ function uploadedAttachmentsMarkup(message) {
     </div>`;
 }
 
-function messageMarkup(message) {
+function thinkingBlockMarkup(message) {
+  const reasoning = typeof message.reasoning === "string" ? message.reasoning : "";
+  if (!reasoning && !message.thinking) return "";
+  const open = message.reasoningOpen !== false;
+  const live = Boolean(message.thinking);
+  return `
+    <div class="thinking-block${open ? " is-open" : ""}${live ? " is-live" : ""}">
+      <button class="thinking-head" type="button" data-thinking-toggle aria-expanded="${open}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 21h4M8.5 14.5a6 6 0 1 1 7 0c-.9.7-1.5 1.5-1.5 2.5h-4c0-1-.6-1.8-1.5-2.5Z"/></svg>
+        <span>${live ? "正在思考…" : "思考过程"}</span>
+        ${live ? '<span class="thinking-dot"></span>' : ""}
+        <svg class="thinking-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 9.5 5 5 5-5"/></svg>
+      </button>
+      <div class="thinking-body"${open ? "" : " hidden"}>
+        <div class="thinking-copy">${esc(reasoning || "正在思考…")}</div>
+      </div>
+    </div>`;
+}
+
+function messageMarkup(message, index = 0) {
   if (message.type === "compressed") {
     const session = activeSession();
     return `
@@ -963,12 +984,14 @@ function messageMarkup(message) {
       </div>`;
   }
 
+  const showBubble = Boolean(message.text) || !(message.thinking || message.searching);
   return `
-    <div class="message assistant"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
+    <div class="message assistant" data-message-index="${index}"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
       <span class="assistant-avatar"><img src="assets/icon-32.png" alt=""></span>
       <div class="message-body">
-        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.thinking ? '<span class="thinking-live">思考中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
-        <div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>
+        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
+        ${thinkingBlockMarkup(message)}
+        ${showBubble ? `<div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>` : ""}
         ${messageSourcesMarkup(message)}
       </div>
     </div>`;
@@ -1025,7 +1048,7 @@ function renderMessages(scroll = "bottom") {
   }
 
   const parts = [`<div class="msg-date">${esc(dateLabel(session.updatedAt || session.createdAt))}</div>`];
-  for (const message of session.messages) parts.push(messageMarkup(message));
+  session.messages.forEach((message, index) => parts.push(messageMarkup(message, index)));
 
   if (typingSessionId === session.id) {
     parts.push(`
@@ -1506,6 +1529,8 @@ function ensureAssistantDraft(stream) {
     streaming: true,
     searching: false,
     thinking: false,
+    reasoning: "",
+    reasoningOpen: true,
     streamId: makeId(),
     sources: []
   };
@@ -1618,7 +1643,25 @@ function startChatStream(payload, session) {
     } else if (message.type === "thinking-start") {
       ensureAssistantDraft(stream);
       stream.message.thinking = true;
+      stream.message.reasoningOpen = true;
       if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
+    } else if (message.type === "reasoning") {
+      const delta = typeof message.text === "string" ? message.text : "";
+      if (!delta) return;
+      ensureAssistantDraft(stream);
+      if (typeof stream.message.reasoning !== "string") stream.message.reasoning = "";
+      stream.message.reasoning += delta;
+      stream.message.thinking = true;
+      if (sessionsState.activeId === stream.session.id) {
+        const node = messagesEl.querySelector(`[data-stream-id="${stream.message.streamId}"]`);
+        const copy = node?.querySelector(".thinking-copy");
+        if (copy) {
+          copy.textContent = stream.message.reasoning;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        } else {
+          renderMessages("bottom");
+        }
+      }
     } else if (message.type === "search-start") {
       ensureAssistantDraft(stream);
       stream.message.searching = true;
@@ -1937,6 +1980,25 @@ function bindEvents() {
     const optionsButton = event.target.closest('[data-action="open-options"]');
     if (optionsButton) {
       openOptionsPage();
+      return;
+    }
+    const thinkingButton = event.target.closest("[data-thinking-toggle]");
+    if (thinkingButton) {
+      const block = thinkingButton.closest(".thinking-block");
+      const body = block?.querySelector(".thinking-body");
+      if (!block || !body) return;
+      const opening = body.hidden;
+      body.hidden = !opening;
+      block.classList.toggle("is-open", opening);
+      thinkingButton.setAttribute("aria-expanded", String(opening));
+      const container = thinkingButton.closest("[data-message-index]");
+      const index = Number(container?.dataset.messageIndex);
+      const session = activeSession();
+      const message = Number.isInteger(index) ? session?.messages[index] : null;
+      if (message?.reasoning) {
+        message.reasoningOpen = opening;
+        saveSessions();
+      }
       return;
     }
     const compressed = event.target.closest("[data-compressed-toggle]");

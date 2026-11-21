@@ -452,6 +452,7 @@ ext.runtime.onConnect.addListener((port) => {
           maxTokens: 1600,
           signal: controller.signal,
           onDelta: (delta) => post({ type: "delta", text: delta }),
+          onReasoningDelta: (delta) => post({ type: "reasoning", text: delta }),
           onSources: (sources) => post({ type: "sources", sources }),
           onServerToolCalls: (calls) => post({ type: "tool-calls", calls })
         });

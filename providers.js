@@ -596,6 +596,7 @@ export async function streamProviderChat({
   searchContext = "",
   thinking = null,
   onDelta,
+  onReasoningDelta,
   onSources,
   onServerToolCalls,
   onSearchStart,
@@ -632,6 +633,8 @@ export async function streamProviderChat({
     const cited = new Map();
     const found = new Map();
     if (format === "openai") {
+      const reasoning = data.choices?.[0]?.message?.reasoning_content;
+      if (typeof reasoning === "string" && reasoning) onReasoningDelta?.(reasoning);
       collectOpenAiSources(data.choices?.[0], cited, found);
       const sources = selectedSources(cited, found);
       if (sources.length) onSources?.(sources);
@@ -692,6 +695,8 @@ export async function streamProviderChat({
         collectOpenAiSources(choice, cited, found);
         const calls = choice?.delta?.server_tool_calls || choice?.server_tool_calls;
         if (Array.isArray(calls) && calls.length) serverToolCalls = calls;
+        const reasoning = choice?.delta?.reasoning_content;
+        if (typeof reasoning === "string" && reasoning) onReasoningDelta?.(reasoning);
       }
       const content = choice?.delta?.content ?? choice?.text;
       if (typeof content === "string") delta = content;
