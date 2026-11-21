@@ -222,6 +222,12 @@ function normalizeMessages(messages) {
   return merged;
 }
 
+function supportsDeepSeekWebSearch(provider, model) {
+  return provider?.id === "deepseek" &&
+    (provider.format || "openai") === "openai" &&
+    /^deepseek-flash(?:$|[-.])/i.test(String(model || ""));
+}
+
 function chatUrlFor(provider, base, model, stream = false) {
   if (provider.format === "gemini") {
     const id = String(model).replace(/^models\//, "");
@@ -242,6 +248,7 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
   const outputLimit = Math.max(1, Number(maxTokens) || 1600);
   const safeImages = Array.isArray(images) ? images.filter(Boolean).slice(0, 5) : [];
   const stream = Boolean(requestOptions.stream);
+  const webSearch = Boolean(requestOptions.webSearch) && supportsDeepSeekWebSearch(provider, model);
   const systemPrompt = buildSystemPrompt(safeImages, requestOptions.contextSummary);
 
   if (format === "anthropic") {
@@ -326,16 +333,18 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
     }
     return { role: message.role, content: message.text };
   });
+  const body = {
+    model,
+    stream,
+    messages: [{ role: "system", content: systemPrompt }, ...messages]
+  };
+  if (webSearch) body.tools = [{ type: "deepseek_web_search" }];
   return {
     url: chatUrlFor(provider, base, model),
     options: {
       method: "POST",
       headers,
-      body: JSON.stringify({
-        model,
-        stream,
-        messages: [{ role: "system", content: systemPrompt }, ...messages]
-      })
+      body: JSON.stringify(body)
     }
   };
 }
@@ -362,7 +371,7 @@ function extractText(format, data) {
   return data.choices?.[0]?.text || "";
 }
 
-export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600 }) {
+export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600, webSearch = false }) {
   if (!model) throw new Error("还没有选择模型");
   const normalizedMessages = normalizeMessages(messages);
   const images = [];
@@ -372,7 +381,7 @@ export async function runProviderChat({ provider, model, messages, screenshotDat
     const image = parseDataUrl(attachment);
     if (image) images.push(image);
   }
-  const { url, options } = buildRequest(provider, model, normalizedMessages, images, maxTokens);
+  const { url, options } = buildRequest(provider, model, normalizedMessages, images, maxTokens, { webSearch });
   const data = await fetchJson(url, options, 90000);
   if (data.error) {
     throw new Error(data.error.message || "模型请求失败");
@@ -426,6 +435,57 @@ async function throwResponseError(response) {
   throw new Error(`服务返回 ${response.status}：${String(message).slice(0, 400)}`);
 }
 
+function sourceFromRaw(raw) {
+  const candidate = raw?.url_citation && typeof raw.url_citation === "object" ? raw.url_citation : raw;
+  if (!candidate || typeof candidate.url !== "string") return null;
+  let url;
+  try {
+    url = new URL(candidate.url);
+  } catch {
+    return null;
+  }
+  if (!["http:", "https:"].includes(url.protocol)) return null;
+  return {
+    url: url.href,
+    title: String(candidate.title || "").trim().slice(0, 160) || url.hostname
+  };
+}
+
+function addSource(map, raw) {
+  const source = sourceFromRaw(raw);
+  if (source && !map.has(source.url)) map.set(source.url, source);
+}
+
+function collectOpenAiSources(choice, cited, found) {
+  if (!choice) return;
+  const annotations = [
+    ...(Array.isArray(choice.delta?.annotations) ? choice.delta.annotations : []),
+    ...(Array.isArray(choice.annotations) ? choice.annotations : []),
+    ...(Array.isArray(choice.message?.annotations) ? choice.message.annotations : [])
+  ];
+  for (const annotation of annotations) addSource(cited, annotation?.url_citation || annotation);
+
+  const steps = [
+    ...(Array.isArray(choice.delta?.server_tool_calls) ? choice.delta.server_tool_calls : []),
+    ...(Array.isArray(choice.server_tool_calls) ? choice.server_tool_calls : []),
+    ...(Array.isArray(choice.message?.server_tool_calls) ? choice.message.server_tool_calls : [])
+  ];
+  for (const step of steps) {
+    for (const call of Array.isArray(step?.calls) ? step.calls : []) {
+      for (const source of Array.isArray(call?.sources) ? call.sources : []) addSource(found, source);
+    }
+  }
+
+  const eventCall = choice.server_tool_event?.call;
+  if (eventCall) {
+    for (const source of Array.isArray(eventCall.sources) ? eventCall.sources : []) addSource(found, source);
+  }
+}
+
+function selectedSources(cited, found) {
+  return (cited.size ? [...cited.values()] : [...found.values()]).slice(0, 8);
+}
+
 export async function streamProviderChat({
   provider,
   model,
@@ -434,7 +494,9 @@ export async function streamProviderChat({
   attachments = [],
   maxTokens = 1600,
   contextSummary = "",
+  webSearch = false,
   onDelta,
+  onSources,
   signal
 }) {
   if (!model) throw new Error("还没有选择模型");
@@ -454,7 +516,7 @@ export async function streamProviderChat({
     normalizedMessages,
     images,
     maxTokens,
-    { stream: true, contextSummary }
+    { stream: true, contextSummary, webSearch }
   );
   const response = await fetch(url, { ...options, signal });
   if (!response.ok) await throwResponseError(response);
@@ -465,12 +527,21 @@ export async function streamProviderChat({
     if (data.error) throw new Error(data.error.message || "模型请求失败");
     const text = extractText(format, data).trim();
     if (!text) throw new Error("模型返回了空内容");
+    const cited = new Map();
+    const found = new Map();
+    if (format === "openai") {
+      collectOpenAiSources(data.choices?.[0], cited, found);
+      const sources = selectedSources(cited, found);
+      if (sources.length) onSources?.(sources);
+    }
     onDelta?.(text);
     return text;
   }
 
   if (!response.body) throw new Error("当前环境不支持读取流式响应");
   let fullText = "";
+  const cited = new Map();
+  const found = new Map();
 
   for await (const payload of readSse(response)) {
     if (payload === "[DONE]") break;
@@ -503,6 +574,7 @@ export async function streamProviderChat({
       delta = parts.map((part) => part?.text || "").join("");
     } else {
       const choice = data.choices?.[0];
+      if (format === "openai") collectOpenAiSources(choice, cited, found);
       const content = choice?.delta?.content ?? choice?.text;
       if (typeof content === "string") delta = content;
       else if (Array.isArray(content)) delta = content.map((part) => part?.text || "").join("");
@@ -516,7 +588,11 @@ export async function streamProviderChat({
 
   fullText = fullText.trim();
   if (!fullText) throw new Error("模型没有返回内容");
+  if (format === "openai") {
+    const sources = selectedSources(cited, found);
+    if (sources.length) onSources?.(sources);
+  }
   return fullText;
 }
 
-export { normalizeBase, parseDataUrl, buildRequest };
+export { normalizeBase, parseDataUrl, buildRequest, supportsDeepSeekWebSearch };

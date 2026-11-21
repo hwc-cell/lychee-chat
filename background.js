@@ -1,4 +1,4 @@
-import { fetchProviderModels, runProviderChat, streamProviderChat } from "./providers.js";
+import { fetchProviderModels, runProviderChat, streamProviderChat, supportsDeepSeekWebSearch } from "./providers.js";
 
 const ext = globalThis.browser ?? globalThis.chrome;
 
@@ -231,6 +231,7 @@ async function prepareChatRequest(message) {
   const contextSummary = typeof message.contextSummary === "string"
     ? message.contextSummary.trim().slice(0, 8000)
     : "";
+  const webSearch = message.webSearch === true && supportsDeepSeekWebSearch(provider, provider.selectedModel);
   return {
     provider,
     demo: false,
@@ -238,7 +239,8 @@ async function prepareChatRequest(message) {
     messages: message.messages,
     screenshotDataUrl: message.screenshotDataUrl || null,
     attachments,
-    contextSummary
+    contextSummary,
+    webSearch
   };
 }
 
@@ -323,7 +325,8 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
         messages: prepared.messages,
         screenshotDataUrl: prepared.screenshotDataUrl,
         attachments: prepared.attachments,
-        maxTokens: 1600
+        maxTokens: 1600,
+        webSearch: prepared.webSearch
       });
       return {
         text,
@@ -384,9 +387,11 @@ ext.runtime.onConnect.addListener((port) => {
           screenshotDataUrl: prepared.screenshotDataUrl,
           attachments: prepared.attachments,
           contextSummary: prepared.contextSummary,
+          webSearch: prepared.webSearch,
           maxTokens: 1600,
           signal: controller.signal,
-          onDelta: (delta) => post({ type: "delta", text: delta })
+          onDelta: (delta) => post({ type: "delta", text: delta }),
+          onSources: (sources) => post({ type: "sources", sources })
         });
         post({ type: "done", text });
       }

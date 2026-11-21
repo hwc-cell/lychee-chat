@@ -4213,3 +4213,83 @@ html[data-theme] .import-panel .drawer-close:disabled {
   opacity: .4;
   cursor: default;
 }
+
+html[data-theme] .web-search-toggle {
+  padding: 2px 7px;
+  margin: -2px 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+html[data-theme] .web-search-toggle svg {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+html[data-theme] .web-search-toggle.is-on {
+  border-color: color-mix(in srgb, var(--leaf) 24%, var(--line));
+  background: var(--leaf-soft);
+  color: var(--leaf-strong);
+}
+
+html[data-theme="dark"] .web-search-toggle.is-on {
+  color: var(--leaf);
+}
+
+html[data-theme] .web-search-toggle:hover {
+  background: var(--hover-wash);
+  color: var(--ink-2);
+}
+
+html[data-theme] .message-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+html[data-theme] .message-sources-label {
+  color: var(--faint);
+  font-family: var(--font);
+  font-size: 7.5px;
+}
+
+html[data-theme] .message-sources a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 7.5px;
+  line-height: 1.35;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme] .message-sources a span {
+  display: grid;
+  width: 13px;
+  height: 13px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--faint);
+  font-size: 6.5px;
+}
+
+html[data-theme] .message-sources a:hover {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
+  color: var(--accent);
+}

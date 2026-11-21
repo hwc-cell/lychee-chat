@@ -20,6 +20,7 @@ const EMBEDDED = PARAMS.get("embedded") === "1";
 const PAGE_LABEL = PARAMS.get("page") || "";
 const DEFAULT_PREFS = {
   screenshotOn: true,
+  webSearchOn: false,
   autoCompress: true,
   threshold: 70,
   strategy: "摘要较早消息"
@@ -90,6 +91,7 @@ const STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7
 const shotChip = $("#shotChip");
 const captureToggle = $("#captureToggle");
 const captureLabel = $("#captureLabel");
+const webSearchToggle = $("#webSearchToggle");
 const chatToast = $("#chatToast");
 const minimizeButton = $("#minimizeBtn");
 const demoNotice = $("#demoNotice");
@@ -114,10 +116,7 @@ const importSelectedCount = $("#importSelectedCount");
 const importCancel = $("#importCancel");
 const importConfirm = $("#importConfirm");
 
-const MAX_IMPORT_SELECTION = 200;
 const DEEPSEEK_LIST_ROWS = 120;
-const IMPORT_STORAGE_CEILING = 8 * 1024 * 1024;
-const IMPORT_STORAGE_RESERVE = 256 * 1024;
 let deepseekExport = null;
 let deepseekFileName = "";
 let deepseekQuery = "";
@@ -275,6 +274,9 @@ function serializableSessions() {
             screenshot: Boolean(message.screenshot),
             attachments: Array.isArray(message.attachments)
               ? message.attachments.map(({ name, type }) => ({ name, type }))
+              : [],
+            sources: Array.isArray(message.sources)
+              ? message.sources.slice(0, 8).map(({ title, url }) => ({ title: String(title || "").slice(0, 160), url: String(url || "") }))
               : []
           })
     }))
@@ -395,11 +397,6 @@ function deepseekRowMarkup(meta) {
     </label>`;
 }
 
-function showDeepseekNotice(message) {
-  importLimit.classList.add("is-warning");
-  importLimit.textContent = message;
-}
-
 function updateDeepseekSelectionUI() {
   if (!deepseekExport) {
     importSelectedCount.textContent = "未选择会话";
@@ -414,15 +411,8 @@ function updateDeepseekSelectionUI() {
   const matches = filteredDeepseekSessions();
   const selectable = matches.filter((meta) => !deepseekImportedMeta(meta));
   const allSelected = selectable.length > 0 && selectable.every((meta) => deepseekSelected.has(meta.id));
-  const atLimit = deepseekSelected.size >= MAX_IMPORT_SELECTION;
-  importSelectAll.textContent = allSelected
-    ? "取消全选"
-    : atLimit
-      ? "已达上限"
-      : selectable.length > MAX_IMPORT_SELECTION
-        ? `选最近 ${MAX_IMPORT_SELECTION}`
-        : "全选";
-  importSelectAll.disabled = !selectable.length || deepseekBusy || (atLimit && !allSelected);
+  importSelectAll.textContent = allSelected ? "取消全选" : "全选";
+  importSelectAll.disabled = !selectable.length || deepseekBusy;
   importSelectedCount.textContent = deepseekSelected.size
     ? `已选择 ${deepseekSelected.size} 个会话`
     : "未选择会话";
@@ -439,8 +429,8 @@ function updateDeepseekSelectionUI() {
     } else {
       const hidden = matches.length - Math.min(matches.length, DEEPSEEK_LIST_ROWS);
       importLimit.textContent = hidden > 0
-        ? `显示匹配的最近 ${DEEPSEEK_LIST_ROWS} 个，其余 ${hidden} 个请搜索定位。单次最多导入 ${MAX_IMPORT_SELECTION} 个。`
-        : `单次最多导入 ${MAX_IMPORT_SELECTION} 个，写入前会校验本机剩余空间。`;
+        ? `显示匹配的最近 ${DEEPSEEK_LIST_ROWS} 个；“全选”会同时选中其余 ${hidden} 个未显示结果。`
+        : "默认不勾选；可以逐个选择，也可以直接全选后导入。";
     }
   }
 }
@@ -576,56 +566,22 @@ async function loadDeepSeekFile(file) {
   }
 }
 
-async function storageUsageBytes() {
-  try {
-    const used = await ext.storage.local.getBytesInUse(null);
-    if (Number.isFinite(used)) return used;
-  } catch {}
-  try {
-    const all = await ext.storage.local.get(null);
-    return new TextEncoder().encode(JSON.stringify(all)).length;
-  } catch {
-    return 0;
-  }
-}
-
-function makeBudgetError(totalBytes, availableBytes) {
-  const error = new Error("storage-budget");
-  error.budget = { totalBytes, availableBytes };
-  return error;
-}
-
 function toggleAllDeepseekSessions() {
   if (!deepseekExport || deepseekBusy) return;
   const selectable = filteredDeepseekSessions().filter((meta) => !deepseekImportedMeta(meta));
   if (!selectable.length) return;
   const allSelected = selectable.every((meta) => deepseekSelected.has(meta.id));
-  let deepseekLimitNotice = "";
 
   if (allSelected) {
     for (const meta of selectable) deepseekSelected.delete(meta.id);
   } else {
-    let room = MAX_IMPORT_SELECTION - deepseekSelected.size;
-    let blocked = false;
-    for (const meta of selectable) {
-      if (deepseekSelected.has(meta.id)) continue;
-      if (room <= 0) {
-        blocked = true;
-        break;
-      }
-      deepseekSelected.add(meta.id);
-      room -= 1;
-    }
-    if (blocked) {
-      deepseekLimitNotice = `单次最多选择 ${MAX_IMPORT_SELECTION} 个对话，请分批导入。`;
-    }
+    for (const meta of selectable) deepseekSelected.add(meta.id);
   }
 
   for (const input of importList.querySelectorAll("input[data-import-id]")) {
     input.checked = deepseekSelected.has(input.value);
   }
   updateDeepseekSelectionUI();
-  if (deepseekLimitNotice) showDeepseekNotice(deepseekLimitNotice);
 }
 
 async function runDeepSeekImport() {
@@ -635,23 +591,16 @@ async function runDeepSeekImport() {
   setDeepseekBusy(true, `读取 0/${sourceIds.length}`);
 
   try {
-    const used = await storageUsageBytes();
-    const available = Math.max(0, IMPORT_STORAGE_CEILING - used - IMPORT_STORAGE_RESERVE);
-    if (!available) {
-      throw makeBudgetError(0, 0);
-    }
-
     const imported = [];
     const knownIds = new Set(sessionsState.items.map((session) => session.id));
     let skipped = 0;
-    let totalBytes = 0;
 
     for (let index = 0; index < sourceIds.length; index += 1) {
       const sourceId = sourceIds[index];
       const meta = metaById.get(sourceId);
       const localId = deepseekLocalId(sourceId);
       importConfirm.textContent = `读取 ${index + 1}/${sourceIds.length}`;
-      if ((index + 1) % 4 === 0) await new Promise(requestAnimationFrame);
+      if ((index + 1) % 10 === 0) await new Promise(requestAnimationFrame);
 
       if (!meta || knownIds.has(localId)) {
         skipped += 1;
@@ -665,11 +614,6 @@ async function runDeepSeekImport() {
         skipped += 1;
         continue;
       }
-      const size = new TextEncoder().encode(JSON.stringify(session)).length;
-      if (totalBytes + size > available) {
-        throw makeBudgetError(totalBytes + size, available);
-      }
-      totalBytes += size;
       knownIds.add(localId);
       imported.push(session);
     }
@@ -711,15 +655,8 @@ async function runDeepSeekImport() {
     }
     setDeepseekBusy(false);
     importLimit.classList.add("is-warning");
-    if (error?.budget) {
-      const { totalBytes, availableBytes } = error.budget;
-      if (!availableBytes) {
-        importLimit.textContent = "本机扩展存储空间已接近上限，请先删除一些会话或截图后再导入。";
-      } else {
-        importLimit.textContent = `选中的对话约 ${(totalBytes / 1024 / 1024).toFixed(1)} MB，超过剩余可导入空间 ${(availableBytes / 1024 / 1024).toFixed(1)} MB。请减少选择后重试。`;
-      }
-    } else if (/quota|配额|QUOTA_BYTES/i.test(error?.message || "")) {
-      importLimit.textContent = "本机扩展存储空间不足，未能写入。请减少选择后重试。";
+    if (/quota|配额|QUOTA_BYTES/i.test(error?.message || "")) {
+      importLimit.textContent = "本机扩展存储空间不足，未能写入。请确认扩展已获得不限存储权限，或删除部分会话后重试。";
     } else {
       importLimit.textContent = `导入失败：${error?.message || "未知错误"}`;
     }
@@ -825,6 +762,7 @@ function updateHeader() {
   const online = $(".chat-online");
   if (online) online.textContent = provider ? "在线" : "未配置";
   demoNotice.hidden = provider?.format !== "demo";
+  updateWebSearchUI();
   document.title = `Lychee-Chat — ${session?.title || "新会话"}`;
 }
 
@@ -857,6 +795,23 @@ function updateComposer() {
   sendBtn.setAttribute("aria-label", "发送");
   sendBtn.classList.remove("is-streaming");
   sendBtn.innerHTML = SEND_ICON;
+}
+
+function deepseekWebSearchAvailable() {
+  return provider?.id === "deepseek" &&
+    provider?.format === "openai" &&
+    /^deepseek-flash(?:$|[-.])/i.test(String(activeModel?.id || ""));
+}
+
+function updateWebSearchUI() {
+  const available = deepseekWebSearchAvailable();
+  const on = available && Boolean(prefs.webSearchOn);
+  webSearchToggle.hidden = !available;
+  webSearchToggle.classList.toggle("is-on", on);
+  webSearchToggle.setAttribute("aria-pressed", String(on));
+  webSearchToggle.title = on
+    ? "DeepSeek 联网搜索已开启，由模型决定本轮是否搜索"
+    : "开启 DeepSeek 联网搜索";
 }
 
 function updateScreenshotUI() {
@@ -912,6 +867,39 @@ function attachmentMarkup(message) {
     </div>`;
 }
 
+function normalizeMessageSources(sources) {
+  const list = [];
+  const seen = new Set();
+  for (const source of Array.isArray(sources) ? sources : []) {
+    if (!source || typeof source.url !== "string") continue;
+    let url;
+    try {
+      url = new URL(source.url);
+    } catch {
+      continue;
+    }
+    if (!["http:", "https:"].includes(url.protocol) || seen.has(url.href)) continue;
+    seen.add(url.href);
+    const title = String(source.title || "").trim().slice(0, 160) || url.hostname;
+    list.push({ url: url.href, title });
+    if (list.length >= 8) break;
+  }
+  return list;
+}
+
+function messageSourcesMarkup(message) {
+  const sources = normalizeMessageSources(message?.sources);
+  if (!sources.length) return "";
+  return `
+    <div class="message-sources">
+      <span class="message-sources-label">参考来源</span>
+      ${sources.map((source, index) => `
+        <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer" title="${esc(source.title)}">
+          <span>${index + 1}</span>${esc(source.title)}
+        </a>`).join("")}
+    </div>`;
+}
+
 function uploadedAttachmentsMarkup(message) {
   const attachments = Array.isArray(message.attachments) ? message.attachments : [];
   if (!attachments.length) return "";
@@ -960,6 +948,7 @@ function messageMarkup(message) {
       <div class="message-body">
         <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
         <div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>
+        ${messageSourcesMarkup(message)}
       </div>
     </div>`;
 }
@@ -1494,7 +1483,8 @@ function ensureAssistantDraft(stream) {
     time: nowTime(),
     model: stream.modelLabel,
     streaming: true,
-    streamId: makeId()
+    streamId: makeId(),
+    sources: []
   };
   stream.session.messages.push(message);
   stream.message = message;
@@ -1591,6 +1581,12 @@ function startChatStream(payload, session) {
       ensureAssistantDraft(stream);
       stream.message.text += delta;
       renderStreamUpdate(stream);
+    } else if (message.type === "sources") {
+      const sources = normalizeMessageSources(message.sources);
+      if (!sources.length) return;
+      ensureAssistantDraft(stream);
+      stream.message.sources = sources;
+      if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
     } else if (message.type === "done") {
       finalizeStream(stream, { fullText: String(message.text || "") });
     } else if (message.type === "error") {
@@ -1703,7 +1699,8 @@ async function sendMessage() {
     messages: history,
     contextSummary: compressed?.summary || "",
     screenshotDataUrl: screenshotData,
-    attachments: attachmentSnapshot.map((attachment) => attachment.dataUrl)
+    attachments: attachmentSnapshot.map((attachment) => attachment.dataUrl),
+    webSearch: deepseekWebSearchAvailable() && Boolean(prefs.webSearchOn)
   }, session);
 }
 
@@ -1816,11 +1813,6 @@ function bindEvents() {
     if (!input) return;
     const id = input.value;
     if (input.checked) {
-      if (deepseekSelected.size >= MAX_IMPORT_SELECTION) {
-        input.checked = false;
-        showDeepseekNotice(`单次最多选择 ${MAX_IMPORT_SELECTION} 个对话，请分批导入。`);
-        return;
-      }
       deepseekSelected.add(id);
     } else {
       deepseekSelected.delete(id);
@@ -1861,6 +1853,11 @@ function bindEvents() {
 
   $("#shotRemove").addEventListener("click", () => setScreenshot(false));
   captureToggle.addEventListener("click", () => setScreenshot(!prefs.screenshotOn));
+  webSearchToggle.addEventListener("click", () => {
+    prefs.webSearchOn = !prefs.webSearchOn;
+    savePrefs();
+    updateWebSearchUI();
+  });
 
   messagesEl.addEventListener("click", (event) => {
     const copyButton = event.target.closest("[data-copy-code]");
@@ -1987,6 +1984,7 @@ function bindEvents() {
       if (changes[PREFS_KEY]) {
         prefs = { ...DEFAULT_PREFS, ...(changes[PREFS_KEY].newValue || {}) };
         updateScreenshotUI();
+        updateWebSearchUI();
         updateContextUI();
       }
     });

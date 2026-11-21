@@ -1,6 +1,6 @@
 # Lychee-Chat · Chrome Web Store 发布指南
 
-本文对应版本 `0.5.0`，目标是发布一个 Chrome Manifest V3 扩展。
+本文对应版本 `0.5.5`，目标是发布一个 Chrome Manifest V3 扩展。
 
 ## 1. 本地安装与验收
 
@@ -79,22 +79,22 @@ GitHub Pages 示例：
   4. 会话管理抽屉
   5. 上下文压缩与模型窗口设置
 
-`store/` 里仍是旧版界面的宣传图，不能直接作为 0.5.0 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
+`store/` 里仍是旧版界面的宣传图，不能直接作为 0.5.5 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
 
 ### 2.4 打包 ZIP
 
 在项目根目录中执行（不要把整个外层文件夹打进去）：
 
 ```bash
-rm -f ../lychee-chat-0.5.0.zip
-zip -r ../lychee-chat-0.5.0.zip . \
+rm -f ../lychee-chat-0.5.5.zip
+zip -r ../lychee-chat-0.5.5.zip . \
   -x "dev-*" "preview-*" "store/*" "PUBLISHING.md" "*.zip" ".DS_Store" "dev-chrome-mock.js"
 ```
 
 检查 ZIP 根目录必须直接看到 `manifest.json`：
 
 ```bash
-unzip -l ../lychee-chat-0.5.0.zip | head -30
+unzip -l ../lychee-chat-0.5.5.zip | head -30
 ```
 
 不要把以下内容发布出去：
@@ -136,7 +136,8 @@ unzip -l ../lychee-chat-0.5.0.zip | head -30
 > - 自定义 OpenAI / Anthropic / Gemini / Ollama 兼容接口
 > - 每个模型单独确认视觉能力，非视觉模型不会进入聊天
 > - 会话搜索、置顶、重命名、删除
-> - 导入 DeepSeek 官方导出的对话（ZIP / 单会话 JSON），本机解析、搜索与批量选择
+> - 导入 DeepSeek 官方导出的对话（ZIP / 单会话 JSON），本机解析、搜索与全选导入
+> - DeepSeek 联网搜索开关与引用来源展示
 > - 安全 Markdown 渲染：标题、列表、表格、引用、代码块，代码可一键复制
 > - 每个模型预设上下文窗口，并可在设置中调整用量估算窗口
 > - 浮窗可拖动，位置自动记忆；页面悬浮入口可隐藏
@@ -161,7 +162,7 @@ unzip -l ../lychee-chat-0.5.0.zip | head -30
 ### 商店图标与截图
 
 - 图标：上传 `assets/icon-128.png`
-- 截图：必须使用 0.5.0 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
+- 截图：必须使用 0.5.5 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
 - 不要使用带 API Key、个人聊天或真实用户数据的截图
 
 ## 4. 隐私标签页怎么填
@@ -177,6 +178,7 @@ unzip -l ../lychee-chat-0.5.0.zip | head -30
 - **activeTab**：用户点击扩展图标后访问当前标签页，仅在用户发送消息时捕获当前可见页面截图；不读取所有网站或浏览历史。
 - **scripting**：在当前页面注入右上角浮动聊天界面。
 - **storage**：在本机保存模型配置、API Key、聊天文本和会话记录。
+- **unlimitedStorage**：用于完整导入较大的本地会话库，避免默认存储额度不足；会话数据不会上传或同步。
 - **host permissions（特定 API 域名）**：连接用户选择的 AI 提供商 API。
 - **optional_host_permissions（任意 https/http）**：仅在用户配置自定义提供商时，按实际域名请求访问权限。
 - **web_accessible_resources（<all_urls>）**：为了让聊天 iframe 与图标资源能在用户打开的普通网页上显示。
@@ -189,6 +191,7 @@ unzip -l ../lychee-chat-0.5.0.zip | head -30
 - **个人通信 / 聊天文本**：直接发送给用户配置的 AI 提供商。
 - **图片附件**：最多 4 张，仅随当前请求发送，不持久化到本地。
 - **身份验证信息 / API Key**：仅保存在本机，用于向用户选择的提供商发起请求。
+- **DeepSeek 联网搜索**：由用户主动开启，搜索请求由 DeepSeek 服务端执行；开发者服务器不接收搜索请求或结果。
 - **不出售数据**。
 - **不用于广告、画像或与核心功能无关的用途**。
 - **不用于信用评估或借贷**。

@@ -150,7 +150,7 @@
   <div class="meta">
     <span>生效日期：2026-11-21</span>
     <span>适用产品：Lychee-Chat 浏览器扩展（Chrome / Firefox）</span>
-    <span>版本：0.5.0</span>
+    <span>版本：0.5.5</span>
   </div>
 
   <article>
@@ -177,6 +177,7 @@
       <p>API Key、模型配置和聊天文本通过 <code>chrome.storage.local</code>（Firefox 为 <code>browser.storage.local</code>）保存在你的本地浏览器配置中；界面偏好（主题、聊天窗位置、是否显示页面悬浮按钮）也仅保存在本机。它们不会同步到开发者服务器，也不会上传到 Lychee-Chat 自建的服务。</p>
       <p>页面截图和你上传的图片只在发送请求时短暂保留在内存中，并发送给你选择的模型提供商；Lychee-Chat 不会把图片内容持久化到本地存储。重新打开页面后，历史消息中的图片只显示占位提示和文件名。</p>
       <p>当你导入 DeepSeek 对话时，导出文件只在浏览器内存中解析，原始导出包不会被复制、保存或上传。只有你勾选并确认导入的文字和附件名称会写入本地会话记录；导出包中的图片文件不会被提取。导入的对话不会自动发送，只有你在该会话中继续聊天时，相关上下文才会按普通会话规则发送给你选择的提供商。</p>
+      <p>完整导入大量对话可能超出浏览器的默认本地存储额度，因此扩展声明了 <code>unlimitedStorage</code> 权限。该权限只用于在本机保存你的会话数据；扩展不会因此上传、同步或共享这些数据。</p>
       <p>你可以在聊天窗中删除单个会话，或通过移除扩展来清除扩展保存在本地的数据。提供商一侧的数据保留规则由该提供商决定。</p>
     </section>
 
@@ -184,6 +185,7 @@
       <h2>4. 数据发送给谁</h2>
       <p>当你发送消息时，Lychee-Chat 会把该轮对话文本、按需附带的页面截图、你主动上传的图片附件和必要的请求参数发送到你选择的提供商 API。你的 API Key 作为身份凭证随请求发送给该提供商。</p>
       <p>预置提供商可能包括：月之暗面、DeepSeek、阿里云百炼、智谱、豆包/火山方舟、MiniMax、小米 MiMo、硅基流动、Anthropic、OpenAI、Google Gemini、xAI、OpenRouter，以及本地运行的 Ollama 或 LM Studio。自定义提供商的地址由你填写。</p>
+      <p>当你主动开启 DeepSeek 联网搜索时，DeepSeek 会根据你的提问在服务端生成搜索、检索公开网页并生成带引用的回答。搜索请求和结果由 DeepSeek 处理，Lychee-Chat 不会把搜索请求发送给开发者服务器，也不会接收或保存 DeepSeek 的搜索记录。</p>
       <p>这些第三方服务会按照各自的隐私政策和服务条款处理数据。使用前请阅读对应提供商的条款。Lychee-Chat 不控制第三方的处理方式。</p>
       <p>内置的“Lychee Demo”演示模式不会请求任何外部接口，只返回本地预设的演示回复。</p>
     </section>
@@ -206,6 +208,7 @@
         <li><strong>activeTab：</strong>在你点击扩展图标后，允许扩展访问当前标签页并捕获当前可见页面的截图。</li>
         <li><strong>scripting：</strong>用于在当前页面注入右上角的浮动聊天窗。</li>
         <li><strong>storage：</strong>保存模型配置、API Key 和本地会话记录。</li>
+        <li><strong>unlimitedStorage：</strong>允许完整导入较大的本地会话库，避免浏览器默认存储额度不足；数据仍只保存在本机。</li>
         <li><strong>特定 API 域名权限：</strong>用于连接你选择的 AI 提供商接口。</li>
         <li><strong>可选域名权限：</strong>当你添加自定义提供商时，扩展会在保存或测试时请求该接口域名的访问权限。</li>
       </ul>
