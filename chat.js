@@ -6,6 +6,7 @@ import {
   normalizeContextWindow
 } from "./model-context.js";
 import { providerIcon } from "./provider-icons.js";
+import { openDeepSeekExport, deepseekSessionToLocal } from "./deepseek-import.js";
 
 const ext = globalThis.browser ?? globalThis.chrome;
 
@@ -94,6 +95,34 @@ const minimizeButton = $("#minimizeBtn");
 const demoNotice = $("#demoNotice");
 const errorNotice = $("#errorNotice");
 const errorNoticeText = $("#errorNoticeText");
+const importSessionsBtn = $("#importSessionsBtn");
+const importPanel = $("#importPanel");
+const importScrim = $("#importScrim");
+const importIntro = $("#importIntro");
+const importStatus = $("#importStatus");
+const importPickBtn = $("#importPickBtn");
+const importFileInput = $("#deepseekFileInput");
+const importBrowser = $("#importBrowser");
+const importSourceName = $("#importSourceName");
+const importSummary = $("#importSummary");
+const importReselectBtn = $("#importReselectBtn");
+const importSearch = $("#importSearch");
+const importSelectAll = $("#importSelectAll");
+const importList = $("#importList");
+const importLimit = $("#importLimit");
+const importSelectedCount = $("#importSelectedCount");
+const importCancel = $("#importCancel");
+const importConfirm = $("#importConfirm");
+
+const MAX_IMPORT_SELECTION = 200;
+const DEEPSEEK_LIST_ROWS = 120;
+const IMPORT_STORAGE_CEILING = 8 * 1024 * 1024;
+const IMPORT_STORAGE_RESERVE = 256 * 1024;
+let deepseekExport = null;
+let deepseekFileName = "";
+let deepseekQuery = "";
+let deepseekSelected = new Set();
+let deepseekBusy = false;
 
 function activeSession() {
   return sessionsState.items.find((session) => session.id === sessionsState.activeId) || null;
@@ -275,7 +304,9 @@ function mergedDeletedSessions(remote, local) {
 }
 
 function mergeSessionPayloads(remote, local) {
+  const revived = new Set(Array.isArray(local?.revived) ? local.revived : []);
   const deleted = mergedDeletedSessions(remote?.deleted, local?.deleted);
+  for (const id of revived) delete deleted[id];
   const byId = new Map();
   const accept = (session) => {
     if (!session?.id || deleted[session.id]) return;
@@ -311,12 +342,388 @@ async function persistMergedSessions(snapshot) {
   }
 }
 
-function saveSessions() {
+function saveSessions({ revived = [] } = {}) {
   const snapshot = serializableSessions();
-  sessionsSaveTail = sessionsSaveTail
+  if (revived.length) snapshot.revived = revived;
+  const pending = sessionsSaveTail
     .catch(() => {})
-    .then(() => persistMergedSessions(snapshot))
-    .catch(() => {});
+    .then(() => persistMergedSessions(snapshot));
+  sessionsSaveTail = pending.catch(() => {});
+  return pending;
+}
+
+function deepseekLocalId(sourceId) {
+  return `deepseek-${sourceId}`;
+}
+
+function deepseekImportedMeta(meta) {
+  return sessionsState.items.some((session) => session.id === deepseekLocalId(meta.id));
+}
+
+function deepseekTimestamp(meta) {
+  return Date.parse(meta.updatedAt || "") || Date.parse(meta.insertedAt || "") || 0;
+}
+
+function sortedDeepseekSessions() {
+  if (!deepseekExport) return [];
+  return [...deepseekExport.sessions].sort((a, b) => deepseekTimestamp(b) - deepseekTimestamp(a));
+}
+
+function filteredDeepseekSessions() {
+  const query = deepseekQuery.trim().toLowerCase();
+  const rows = sortedDeepseekSessions();
+  if (!query) return rows;
+  return rows.filter((meta) => `${meta.title} ${meta.id}`.toLowerCase().includes(query));
+}
+
+function deepseekMetaLabel(meta) {
+  const count = meta.messageCount ? `${meta.messageCount} 条原始消息` : "消息数未知";
+  const timestamp = deepseekTimestamp(meta);
+  return timestamp ? `${count} · ${timeLabel(timestamp)}` : count;
+}
+
+function deepseekRowMarkup(meta) {
+  const imported = deepseekImportedMeta(meta);
+  return `
+    <label class="import-row${imported ? " is-imported" : ""}">
+      <input type="checkbox" data-import-id="${esc(meta.id)}" value="${esc(meta.id)}"${deepseekSelected.has(meta.id) ? " checked" : ""}${imported ? " disabled" : ""}>
+      <span class="import-row-main">
+        <span class="import-row-title">${esc(meta.title || "未命名对话")}</span>
+        <span class="import-row-meta">${esc(deepseekMetaLabel(meta))}</span>
+      </span>
+      ${imported ? '<span class="import-row-state">已导入</span>' : ""}
+    </label>`;
+}
+
+function showDeepseekNotice(message) {
+  importLimit.classList.add("is-warning");
+  importLimit.textContent = message;
+}
+
+function updateDeepseekSelectionUI() {
+  if (!deepseekExport) {
+    importSelectedCount.textContent = "未选择会话";
+    importConfirm.disabled = true;
+    importConfirm.textContent = "导入";
+    importSelectAll.disabled = true;
+    importLimit.textContent = "";
+    importLimit.classList.remove("is-warning");
+    return;
+  }
+
+  const matches = filteredDeepseekSessions();
+  const selectable = matches.filter((meta) => !deepseekImportedMeta(meta));
+  const allSelected = selectable.length > 0 && selectable.every((meta) => deepseekSelected.has(meta.id));
+  const atLimit = deepseekSelected.size >= MAX_IMPORT_SELECTION;
+  importSelectAll.textContent = allSelected
+    ? "取消全选"
+    : atLimit
+      ? "已达上限"
+      : selectable.length > MAX_IMPORT_SELECTION
+        ? `选最近 ${MAX_IMPORT_SELECTION}`
+        : "全选";
+  importSelectAll.disabled = !selectable.length || deepseekBusy || (atLimit && !allSelected);
+  importSelectedCount.textContent = deepseekSelected.size
+    ? `已选择 ${deepseekSelected.size} 个会话`
+    : "未选择会话";
+  importConfirm.disabled = deepseekBusy || !deepseekSelected.size;
+  importConfirm.textContent = "导入";
+  importLimit.classList.remove("is-warning");
+  if (!deepseekBusy) {
+    const importedCount = deepseekExport.sessions.filter(deepseekImportedMeta).length;
+    importSummary.textContent = `${deepseekExport.sessions.length.toLocaleString("zh-CN")} 个对话 · ${importedCount} 个已导入`;
+    if (!matches.length) {
+      importLimit.textContent = "没有匹配的对话，换个关键词试试。";
+    } else if (!selectable.length) {
+      importLimit.textContent = "当前筛选结果都已导入，可以直接开始聊天。";
+    } else {
+      const hidden = matches.length - Math.min(matches.length, DEEPSEEK_LIST_ROWS);
+      importLimit.textContent = hidden > 0
+        ? `显示匹配的最近 ${DEEPSEEK_LIST_ROWS} 个，其余 ${hidden} 个请搜索定位。单次最多导入 ${MAX_IMPORT_SELECTION} 个。`
+        : `单次最多导入 ${MAX_IMPORT_SELECTION} 个，写入前会校验本机剩余空间。`;
+    }
+  }
+}
+
+function renderDeepseekSessions() {
+  if (!deepseekExport) return;
+  const matches = filteredDeepseekSessions();
+  const shown = matches.slice(0, DEEPSEEK_LIST_ROWS);
+  importList.innerHTML = shown.length
+    ? shown.map(deepseekRowMarkup).join("")
+    : `<div class="import-empty">${deepseekQuery.trim()
+        ? "没有找到匹配的对话。<br>换个关键词，或清空搜索。"
+        : "这个导出包里没有可导入的对话。"}</div>`;
+  updateDeepseekSelectionUI();
+}
+
+function setDeepseekBusy(busy, label = "导入") {
+  deepseekBusy = busy;
+  importPanel.classList.toggle("is-busy", busy);
+  importSearch.disabled = busy;
+  importReselectBtn.disabled = busy;
+  importCancel.disabled = busy;
+  importPickBtn.disabled = busy;
+  $("#closeImport").disabled = busy;
+  for (const input of importList.querySelectorAll("input[data-import-id]")) {
+    input.disabled = busy || sessionsState.items.some((session) => session.id === deepseekLocalId(input.value));
+  }
+  if (busy) {
+    importConfirm.disabled = true;
+    importConfirm.textContent = label;
+    importSelectAll.disabled = true;
+  } else {
+    updateDeepseekSelectionUI();
+  }
+}
+
+function resetDeepSeekImport() {
+  deepseekExport = null;
+  deepseekFileName = "";
+  deepseekQuery = "";
+  deepseekSelected = new Set();
+  deepseekBusy = false;
+  importPanel.classList.remove("is-busy");
+  importFileInput.value = "";
+  importSearch.value = "";
+  importSearch.disabled = false;
+  importReselectBtn.disabled = false;
+  importCancel.disabled = false;
+  importPickBtn.disabled = false;
+  $("#closeImport").disabled = false;
+  importIntro.hidden = false;
+  importBrowser.hidden = true;
+  importStatus.textContent = "文件仅在本机解析。";
+  importStatus.classList.remove("is-warning");
+  importPickBtn.textContent = "选择文件";
+  importSourceName.textContent = "";
+  importSummary.textContent = "";
+  importList.innerHTML = "";
+  updateDeepseekSelectionUI();
+}
+
+function openDeepSeekImport() {
+  closeContext();
+  closeSessions();
+  chatToast.classList.remove("is-visible");
+  resetDeepSeekImport();
+  importPanel.inert = false;
+  importPanel.classList.add("is-open");
+  importPanel.setAttribute("aria-hidden", "false");
+  importScrim.classList.add("is-open");
+  requestAnimationFrame(() => importPickBtn.focus());
+}
+
+function closeDeepSeekImport(force = false) {
+  if (deepseekBusy && !force) return;
+  importPanel.classList.remove("is-open");
+  importPanel.setAttribute("aria-hidden", "true");
+  importPanel.inert = true;
+  importScrim.classList.remove("is-open");
+  resetDeepSeekImport();
+}
+
+async function loadDeepSeekFile(file) {
+  if (!file || deepseekBusy) return;
+  setDeepseekBusy(true, "解析中…");
+  importStatus.textContent = "正在读取导出索引…";
+  importStatus.classList.remove("is-warning");
+  let failure = null;
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const parsed = await openDeepSeekExport(file);
+    deepseekExport = parsed;
+    deepseekFileName = file.name;
+    deepseekQuery = "";
+    deepseekSelected = new Set();
+    importSearch.value = "";
+    deepseekBusy = false;
+    importPanel.classList.remove("is-busy");
+    importIntro.hidden = true;
+    importBrowser.hidden = false;
+    importSourceName.textContent = deepseekFileName;
+    importStatus.textContent = "文件仅在本机解析。";
+    importStatus.classList.remove("is-warning");
+    renderDeepseekSessions();
+  } catch (error) {
+    failure = error;
+  } finally {
+    importFileInput.value = "";
+    if (!failure) {
+      deepseekBusy = false;
+      importPanel.classList.remove("is-busy");
+      importSearch.disabled = false;
+      importReselectBtn.disabled = false;
+      importCancel.disabled = false;
+      importPickBtn.disabled = false;
+      $("#closeImport").disabled = false;
+      updateDeepseekSelectionUI();
+    }
+  }
+
+  if (failure) {
+    setDeepseekBusy(false);
+    const message = failure.message || "读取文件失败";
+    if (deepseekExport) {
+      importLimit.classList.add("is-warning");
+      importLimit.textContent = message;
+    } else {
+      importStatus.classList.add("is-warning");
+      importStatus.textContent = message;
+      importPickBtn.textContent = "重新选择文件";
+    }
+  }
+}
+
+async function storageUsageBytes() {
+  try {
+    const used = await ext.storage.local.getBytesInUse(null);
+    if (Number.isFinite(used)) return used;
+  } catch {}
+  try {
+    const all = await ext.storage.local.get(null);
+    return new TextEncoder().encode(JSON.stringify(all)).length;
+  } catch {
+    return 0;
+  }
+}
+
+function makeBudgetError(totalBytes, availableBytes) {
+  const error = new Error("storage-budget");
+  error.budget = { totalBytes, availableBytes };
+  return error;
+}
+
+function toggleAllDeepseekSessions() {
+  if (!deepseekExport || deepseekBusy) return;
+  const selectable = filteredDeepseekSessions().filter((meta) => !deepseekImportedMeta(meta));
+  if (!selectable.length) return;
+  const allSelected = selectable.every((meta) => deepseekSelected.has(meta.id));
+  let deepseekLimitNotice = "";
+
+  if (allSelected) {
+    for (const meta of selectable) deepseekSelected.delete(meta.id);
+  } else {
+    let room = MAX_IMPORT_SELECTION - deepseekSelected.size;
+    let blocked = false;
+    for (const meta of selectable) {
+      if (deepseekSelected.has(meta.id)) continue;
+      if (room <= 0) {
+        blocked = true;
+        break;
+      }
+      deepseekSelected.add(meta.id);
+      room -= 1;
+    }
+    if (blocked) {
+      deepseekLimitNotice = `单次最多选择 ${MAX_IMPORT_SELECTION} 个对话，请分批导入。`;
+    }
+  }
+
+  for (const input of importList.querySelectorAll("input[data-import-id]")) {
+    input.checked = deepseekSelected.has(input.value);
+  }
+  updateDeepseekSelectionUI();
+  if (deepseekLimitNotice) showDeepseekNotice(deepseekLimitNotice);
+}
+
+async function runDeepSeekImport() {
+  if (deepseekBusy || !deepseekExport || !deepseekSelected.size) return;
+  const sourceIds = [...deepseekSelected];
+  const metaById = new Map(deepseekExport.sessions.map((meta) => [meta.id, meta]));
+  setDeepseekBusy(true, `读取 0/${sourceIds.length}`);
+
+  try {
+    const used = await storageUsageBytes();
+    const available = Math.max(0, IMPORT_STORAGE_CEILING - used - IMPORT_STORAGE_RESERVE);
+    if (!available) {
+      throw makeBudgetError(0, 0);
+    }
+
+    const imported = [];
+    const knownIds = new Set(sessionsState.items.map((session) => session.id));
+    let skipped = 0;
+    let totalBytes = 0;
+
+    for (let index = 0; index < sourceIds.length; index += 1) {
+      const sourceId = sourceIds[index];
+      const meta = metaById.get(sourceId);
+      const localId = deepseekLocalId(sourceId);
+      importConfirm.textContent = `读取 ${index + 1}/${sourceIds.length}`;
+      if ((index + 1) % 4 === 0) await new Promise(requestAnimationFrame);
+
+      if (!meta || knownIds.has(localId)) {
+        skipped += 1;
+        continue;
+      }
+      let session = null;
+      try {
+        session = deepseekSessionToLocal(await deepseekExport.readSession(sourceId), meta);
+      } catch {}
+      if (!session) {
+        skipped += 1;
+        continue;
+      }
+      const size = new TextEncoder().encode(JSON.stringify(session)).length;
+      if (totalBytes + size > available) {
+        throw makeBudgetError(totalBytes + size, available);
+      }
+      totalBytes += size;
+      knownIds.add(localId);
+      imported.push(session);
+    }
+
+    if (!imported.length) {
+      throw new Error("没有可导入的对话，可能已经导入过或只剩思考过程。");
+    }
+
+    importConfirm.textContent = "写入中…";
+    const priorActiveId = sessionsState.activeId;
+    const priorDeleted = { ...sessionsState.deleted };
+    const importedIds = new Set(imported.map((session) => session.id));
+    for (const session of imported) delete sessionsState.deleted[session.id];
+    sessionsState.items.push(...imported);
+    sessionsState.activeId = [...imported].sort((a, b) => b.updatedAt - a.updatedAt)[0].id;
+    updateAll();
+
+    try {
+      await saveSessions({ revived: [...importedIds] });
+    } catch (error) {
+      sessionsState.items = sessionsState.items.filter((session) => !importedIds.has(session.id));
+      sessionsState.activeId = sessionsState.items.some((session) => session.id === priorActiveId)
+        ? priorActiveId
+        : (sessionsState.items[0]?.id || null);
+      sessionsState.deleted = priorDeleted;
+      updateAll();
+      throw error;
+    }
+
+    closeDeepSeekImport(true);
+    showChatToast(skipped
+      ? `已导入 ${imported.length} 个对话，跳过 ${skipped} 个空对话`
+      : `已导入 ${imported.length} 个对话`);
+  } catch (error) {
+    if (!importPanel.classList.contains("is-open")) {
+      closeDeepSeekImport(true);
+      showChatToast(`导入失败：${error?.message || "未知错误"}`, true);
+      return;
+    }
+    setDeepseekBusy(false);
+    importLimit.classList.add("is-warning");
+    if (error?.budget) {
+      const { totalBytes, availableBytes } = error.budget;
+      if (!availableBytes) {
+        importLimit.textContent = "本机扩展存储空间已接近上限，请先删除一些会话或截图后再导入。";
+      } else {
+        importLimit.textContent = `选中的对话约 ${(totalBytes / 1024 / 1024).toFixed(1)} MB，超过剩余可导入空间 ${(availableBytes / 1024 / 1024).toFixed(1)} MB。请减少选择后重试。`;
+      }
+    } else if (/quota|配额|QUOTA_BYTES/i.test(error?.message || "")) {
+      importLimit.textContent = "本机扩展存储空间不足，未能写入。请减少选择后重试。";
+    } else {
+      importLimit.textContent = `导入失败：${error?.message || "未知错误"}`;
+    }
+  }
 }
 
 function sessionStamp(session) {
@@ -1329,8 +1736,27 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && importPanel.classList.contains("is-open")) {
+      const focusables = [...importPanel.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href]")]
+        .filter((element) => element.getClientRects().length);
+      if (!focusables.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !importPanel.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !importPanel.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+      return;
+    }
     if (event.key !== "Escape") return;
-    if (sessionsDrawer.classList.contains("is-open")) closeSessions();
+    if (importPanel.classList.contains("is-open")) closeDeepSeekImport();
+    else if (sessionsDrawer.classList.contains("is-open")) closeSessions();
     else if (contextPopover.classList.contains("is-open")) closeContext();
   });
 
@@ -1369,6 +1795,39 @@ function bindEvents() {
     searchQuery = sessionSearch.value;
     renderSessions();
   });
+
+  importSessionsBtn.addEventListener("click", openDeepSeekImport);
+  $("#closeImport").addEventListener("click", () => closeDeepSeekImport());
+  importScrim.addEventListener("click", () => closeDeepSeekImport());
+  importCancel.addEventListener("click", () => closeDeepSeekImport());
+  importPickBtn.addEventListener("click", () => importFileInput.click());
+  importReselectBtn.addEventListener("click", () => importFileInput.click());
+  importFileInput.addEventListener("change", () => {
+    const file = importFileInput.files?.[0];
+    loadDeepSeekFile(file);
+  });
+  importSearch.addEventListener("input", () => {
+    deepseekQuery = importSearch.value;
+    renderDeepseekSessions();
+  });
+  importSelectAll.addEventListener("click", toggleAllDeepseekSessions);
+  importList.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-import-id]");
+    if (!input) return;
+    const id = input.value;
+    if (input.checked) {
+      if (deepseekSelected.size >= MAX_IMPORT_SELECTION) {
+        input.checked = false;
+        showDeepseekNotice(`单次最多选择 ${MAX_IMPORT_SELECTION} 个对话，请分批导入。`);
+        return;
+      }
+      deepseekSelected.add(id);
+    } else {
+      deepseekSelected.delete(id);
+    }
+    updateDeepseekSelectionUI();
+  });
+  importConfirm.addEventListener("click", runDeepSeekImport);
 
   composerInput.addEventListener("input", () => {
     updateComposerHeight();

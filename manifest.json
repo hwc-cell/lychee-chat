@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lychee-Chat",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "在浏览器右上角与视觉模型聊天，每一轮自动附带当前页面截图。",
   "minimum_chrome_version": "116",
   "icons": {
@@ -72,6 +72,7 @@
         "chat.html",
         "chat.css",
         "chat.js",
+        "deepseek-import.js",
         "lychee.css",
         "markdown.js",
         "model-context.js",

@@ -1,6 +1,6 @@
 # Lychee-Chat · Chrome Web Store 发布指南
 
-本文对应版本 `0.4.6`，目标是发布一个 Chrome Manifest V3 扩展。
+本文对应版本 `0.5.0`，目标是发布一个 Chrome Manifest V3 扩展。
 
 ## 1. 本地安装与验收
 
@@ -79,22 +79,22 @@ GitHub Pages 示例：
   4. 会话管理抽屉
   5. 上下文压缩与模型窗口设置
 
-`store/` 里仍是旧版界面的宣传图，不能直接作为 0.4.6 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
+`store/` 里仍是旧版界面的宣传图，不能直接作为 0.5.0 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
 
 ### 2.4 打包 ZIP
 
 在项目根目录中执行（不要把整个外层文件夹打进去）：
 
 ```bash
-rm -f ../lychee-chat-0.4.6.zip
-zip -r ../lychee-chat-0.4.6.zip . \
+rm -f ../lychee-chat-0.5.0.zip
+zip -r ../lychee-chat-0.5.0.zip . \
   -x "dev-*" "preview-*" "store/*" "PUBLISHING.md" "*.zip" ".DS_Store" "dev-chrome-mock.js"
 ```
 
 检查 ZIP 根目录必须直接看到 `manifest.json`：
 
 ```bash
-unzip -l ../lychee-chat-0.4.6.zip | head -30
+unzip -l ../lychee-chat-0.5.0.zip | head -30
 ```
 
 不要把以下内容发布出去：
@@ -136,6 +136,7 @@ unzip -l ../lychee-chat-0.4.6.zip | head -30
 > - 自定义 OpenAI / Anthropic / Gemini / Ollama 兼容接口
 > - 每个模型单独确认视觉能力，非视觉模型不会进入聊天
 > - 会话搜索、置顶、重命名、删除
+> - 导入 DeepSeek 官方导出的对话（ZIP / 单会话 JSON），本机解析、搜索与批量选择
 > - 安全 Markdown 渲染：标题、列表、表格、引用、代码块，代码可一键复制
 > - 每个模型预设上下文窗口，并可在设置中调整用量估算窗口
 > - 浮窗可拖动，位置自动记忆；页面悬浮入口可隐藏
@@ -160,7 +161,7 @@ unzip -l ../lychee-chat-0.4.6.zip | head -30
 ### 商店图标与截图
 
 - 图标：上传 `assets/icon-128.png`
-- 截图：必须使用 0.4.6 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
+- 截图：必须使用 0.5.0 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
 - 不要使用带 API Key、个人聊天或真实用户数据的截图
 
 ## 4. 隐私标签页怎么填

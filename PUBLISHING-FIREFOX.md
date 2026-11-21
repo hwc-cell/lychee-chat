@@ -1,12 +1,12 @@
 # Lychee-Chat · Firefox AMO 发布指南
 
-本文对应 Firefox 版本 `0.4.6`，目标是把扩展发布到 [Add-ons for Firefox（AMO）](https://addons.mozilla.org/developers/)。
+本文对应 Firefox 版本 `0.5.0`，目标是把扩展发布到 [Add-ons for Firefox（AMO）](https://addons.mozilla.org/developers/)。
 
 ## 1. 发布前确认
 
 - Firefox 最低版本：**142**
 - 扩展 ID：`lychee-chat@lycheeledger.cn`
-- 扩展包：`lychee-chat-firefox-0.4.6.zip`
+- 扩展包：`lychee-chat-firefox-0.5.0.zip`
 - 隐私政策：https://lycheeledger.cn/web/lychee-chat-privacy
 - 支持邮箱：help@lycheeledger.cn
 - 许可证：MIT
@@ -37,7 +37,7 @@ AMO 注册和发布不收取费用。
 对应行为：
 
 - `websiteContent`：用户发送消息时按需捕获当前页面截图，并发送给用户选择的 AI 提供商。
-- `personalCommunications`：用户输入的聊天文本和模型返回内容会发送给所选提供商。
+- `personalCommunications`：用户输入的聊天文本和模型返回内容会发送给所选提供商。用户主动选择的 DeepSeek 导出文件只在浏览器本机解析，不会上传给开发者。
 - `authenticationInfo`：用户配置的 API Key 会随请求发送给所选提供商，仅保存在本机扩展存储中。
 
 Lychee 不运营中转服务器，不接收、不存储这些数据。第三方提供商按自己的隐私政策处理数据。
@@ -56,8 +56,8 @@ Lychee 不运营中转服务器，不接收、不存储这些数据。第三方�
 在项目根目录执行：
 
 ```bash
-rm -f ../lychee-chat-firefox-0.4.6.zip
-zip -r ../lychee-chat-firefox-0.4.6.zip . \
+rm -f ../lychee-chat-firefox-0.5.0.zip
+zip -r ../lychee-chat-firefox-0.5.0.zip . \
   -x "store/*" "PUBLISHING*.md" "*.zip" ".DS_Store"
 ```
 
@@ -93,7 +93,7 @@ npx web-ext lint --source-dir .
 - **主页**：https://github.com/hwc-cell/lychee-chat
 - **支持邮箱**：help@lycheeledger.cn
 - **图标**：`store/store-icon-128.png`
-- **截图**：上传 0.4.6 当前界面的 1280×800 截图，至少包含设置页、聊天窗和深色模式；不要沿用旧版本界面截图
+- **截图**：上传 0.5.0 当前界面的 1280×800 截图，至少包含设置页、聊天窗和深色模式；不要沿用旧版本界面截图
 
 详细说明可参考 [README.md](README.md) 与 [PUBLISHING.md](PUBLISHING.md) 的功能描述。不要使用包含 API Key、真实聊天记录或个人数据的截图。
 
@@ -125,7 +125,7 @@ npx web-ext lint --source-dir .
 
 本地临时加载不需要 AMO 签名，但 Firefox 退出后扩展会被移除。
 
-## 9. 从 0.4.0 更新到 0.4.6
+## 9. 从旧版本更新到 0.5.0
 
 AMO 用扩展 ID 识别同一个扩展，本项目始终使用：
 
@@ -133,32 +133,31 @@ AMO 用扩展 ID 识别同一个扩展，本项目始终使用：
 lychee-chat@lycheeledger.cn
 ```
 
-不要删除旧条目，也不要为 0.4.6 改用新的扩展 ID，否则 Firefox 不会把新版本识别为升级。
+不要删除旧条目，也不要为 0.5.0 改用新的扩展 ID，否则 Firefox 不会把新版本识别为升级。
 
 ### 9.1 已在 AMO 公开列表
 
 1. 登录 [Developer Hub](https://addons.mozilla.org/developers/)。
 2. 进入 **My Add-ons → Lychee-Chat**。
 3. 点击 **Upload New Version**。
-4. 上传 `lychee-chat-firefox-0.4.6.zip`。
+4. 上传 `lychee-chat-firefox-0.5.0.zip`。
 5. 确认版本渠道为 **On this site**（listed），并按页面提示提交审核。
 6. 在版本说明中填写：
 
    ```text
-   Lychee-Chat 0.4.6
-   - 修正失败或中止后连续同角色消息导致 Gemini / Anthropic 请求失败
-   - 修正自动压缩未考虑上下文阈值的问题
-   - 修正设置页异步测试或获取模型可能写入错误提供商的问题
-   - 拉取 Gemini / Anthropic 模型后需要重新确认视觉能力
-   - 修正短窗口侧栏、长提供商名称和视觉状态文字可读性
-   - 避免把生成中的半截回复写入本地会话
-   - 多标签页会话改为合并写入，新增、修改和删除会跨标签同步
-   - 空状态、窄屏标题、字号和聚焦层级完成一轮视觉优化
+   Lychee-Chat 0.5.0
+   - 新增 DeepSeek 官方导出导入：支持 ZIP 与单会话 JSON，在浏览器本机解析
+   - 可搜索并批量选择对话，已导入项自动标记并跳过
+   - 按当前分支导入文字，思考过程和工具调用不会进入聊天记录
+   - 附件只保留文件名；导出包中的图片不会被提取或上传
+   - 单次最多导入 200 个会话，写入前检查本机剩余存储空间
+   - 删除已导入的对话后可以重新导入
+   - 新增导入面板，并完成窄屏、焦点与空状态适配
    ```
 
 7. 审核通过后，AMO 会发布新版本，已安装用户会在 Firefox 中自动收到更新。
 
-同一个版本号不能重复上传。如果 0.4.6 的审核被拒绝并需要重新提交，请先把 `manifest.json` 提升到 `0.4.7`，再重新打包上传。
+同一个版本号不能重复上传。如果 0.5.0 的审核被拒绝并需要重新提交，请先把 `manifest.json` 提升到 `0.5.1`，再重新打包上传。
 
 ### 9.2 之前是 On your own / Unlisted
 
@@ -171,15 +170,15 @@ lychee-chat@lycheeledger.cn
 3. 如果现有条目没有渠道选择，不要新建一个不同 ID 的扩展。先在 Developer Hub 检查该条目的分发设置；仍无 listed 选项时联系 AMO 支持，说明希望保留同一个 add-on ID 并添加公开渠道。
 4. 公开版本审核通过后，在 AMO 搜索检查一次；搜索不到就继续在开发者后台查看条目状态，而不是重复创建扩展。
 
-如果只需要一个新的私人签名 XPI、不要求出现在商店，选择 **On your own** 上传 0.4.6；签名完成后下载 XPI 自行分发即可。
+如果只需要一个新的私人签名 XPI、不要求出现在商店，选择 **On your own** 上传 0.5.0；签名完成后下载 XPI 自行分发即可。
 
 ### 9.3 更新后的检查
 
-- AMO 版本号显示 `0.4.6`
+- AMO 版本号显示 `0.5.0`
 - 文件状态为已签名或已公开
 - 隐私政策链接可访问
 - 扩展管理页显示 Lychee-Chat，且扩展 ID 未改变
-- 已安装 0.4.0 的 Firefox 能检测到 0.4.6 更新
+- 已安装旧版本的 Firefox 能检测到 0.5.0 更新
 
 ## 10. 常见审核问题
 

@@ -254,7 +254,13 @@
     <aside class="sessions-drawer" id="sessionsDrawer" aria-label="会话列表" aria-hidden="true">
       <div class="drawer-head">
         <div><span class="drawer-kicker">History</span><h2>会话</h2></div>
-        <button class="drawer-close" id="closeSessions" type="button" aria-label="关闭会话列表">×</button>
+        <div class="drawer-head-actions">
+          <button class="drawer-import" id="importSessionsBtn" type="button" title="导入 DeepSeek 对话">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/></svg>
+            <span>导入</span>
+          </button>
+          <button class="drawer-close" id="closeSessions" type="button" aria-label="关闭会话列表">×</button>
+        </div>
       </div>
       <button class="new-session-btn" id="newSessionBtn" type="button">+ 新建会话</button>
       <label class="session-search">
@@ -307,6 +313,48 @@
       </button>
       <p class="popover-foot">用量为本地估算；摘要只在本机会话内保留，不会上传到第三方。</p>
     </div>
+
+    <div class="import-scrim" id="importScrim"></div>
+    <section class="import-panel" id="importPanel" role="dialog" aria-modal="true" aria-labelledby="importTitle" aria-hidden="true" inert>
+      <div class="import-head">
+        <div><span class="drawer-kicker">Import</span><h2 id="importTitle">导入 DeepSeek</h2></div>
+        <button class="drawer-close" id="closeImport" type="button" aria-label="关闭导入">×</button>
+      </div>
+      <div class="import-body">
+        <div class="import-intro" id="importIntro">
+          <span class="import-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/></svg>
+          </span>
+          <h3>带入已有的对话</h3>
+          <p>选择 DeepSeek 官方导出的 ZIP，或单个会话 JSON。只导入文字和附件名称，不提取图片文件，也不会上传。</p>
+          <button class="import-pick" id="importPickBtn" type="button">选择文件</button>
+          <input id="deepseekFileInput" type="file" accept=".zip,application/zip,.json,application/json" hidden>
+          <p class="import-status" id="importStatus">文件仅在本机解析。</p>
+        </div>
+        <div class="import-browser" id="importBrowser" hidden>
+          <div class="import-source">
+            <div><strong id="importSourceName"></strong><span id="importSummary"></span></div>
+            <button class="text-button" id="importReselectBtn" type="button">重选</button>
+          </div>
+          <div class="import-tools">
+            <label class="session-search import-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+              <input id="importSearch" type="search" placeholder="搜索标题" autocomplete="off">
+            </label>
+            <button class="import-select-all" id="importSelectAll" type="button">全选</button>
+          </div>
+          <div class="import-list" id="importList"></div>
+          <p class="import-limit" id="importLimit"></p>
+        </div>
+      </div>
+      <div class="import-foot">
+        <span class="import-selected" id="importSelectedCount">未选择会话</span>
+        <div class="import-actions">
+          <button class="import-cancel" id="importCancel" type="button">取消</button>
+          <button class="import-confirm" id="importConfirm" type="button" disabled>导入</button>
+        </div>
+      </div>
+    </section>
 
     <div class="chat-toast" id="chatToast" role="status" aria-live="polite"></div>
   </section>

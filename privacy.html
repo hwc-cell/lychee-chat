@@ -144,13 +144,13 @@
     <div><strong>Lychee-Chat</strong><br><span>Privacy Policy · 隐私政策</span></div>
   </div>
 
-  <div class="kicker">Chrome Extension</div>
+  <div class="kicker">Browser Extension</div>
   <h1>隐私政策</h1>
-  <p class="lead">Lychee-Chat 是一个运行在 Chrome 中的浏览器扩展，让你与支持视觉能力的 AI 模型讨论当前页面，并在每一轮对话中按需附带页面截图。</p>
+  <p class="lead">Lychee-Chat 是一个运行在 Chrome 或 Firefox 中的浏览器扩展，让你与支持视觉能力的 AI 模型讨论当前页面，并在每一轮对话中按需附带页面截图。</p>
   <div class="meta">
-    <span>生效日期：2026-10-24</span>
-    <span>适用产品：Lychee-Chat Chrome 扩展</span>
-    <span>版本：0.2.0</span>
+    <span>生效日期：2026-11-21</span>
+    <span>适用产品：Lychee-Chat 浏览器扩展（Chrome / Firefox）</span>
+    <span>版本：0.5.0</span>
   </div>
 
   <article>
@@ -165,16 +165,18 @@
       <ul>
         <li><strong>当前页面截图：</strong>仅在你通过工具栏图标打开聊天窗，并发送消息且开启截图时捕获。扩展不会持续录屏，也不会在后台定时截图。</li>
         <li><strong>图片附件：</strong>你主动点击附件按钮选择并随消息发送的图片，最多 4 张。</li>
-        <li><strong>当前页面内容：</strong>截图由 Chrome 的可见标签页捕获能力生成，扩展不读取完整浏览历史。</li>
+        <li><strong>当前页面内容：</strong>截图由浏览器的可见标签页捕获能力生成，扩展不读取完整浏览历史。</li>
         <li><strong>聊天内容：</strong>你输入的文本和所选模型返回的文本。</li>
+        <li><strong>导入的对话：</strong>你主动选择导入的 DeepSeek 导出文件，以及你勾选保留的对话文字和附件名称。</li>
         <li><strong>配置信息：</strong>所选提供商、Base URL、模型、API Key，以及本地保存的会话记录。</li>
       </ul>
     </section>
 
     <section>
       <h2>3. 数据存储在哪里</h2>
-      <p>API Key、模型配置和聊天文本通过 <code>chrome.storage.local</code> 保存在你的本地 Chrome 配置中；界面偏好（主题、聊天窗位置、是否显示页面悬浮按钮）也仅保存在本机。它们不会同步到开发者服务器，也不会上传到 Lychee-Chat 自建的服务。</p>
+      <p>API Key、模型配置和聊天文本通过 <code>chrome.storage.local</code>（Firefox 为 <code>browser.storage.local</code>）保存在你的本地浏览器配置中；界面偏好（主题、聊天窗位置、是否显示页面悬浮按钮）也仅保存在本机。它们不会同步到开发者服务器，也不会上传到 Lychee-Chat 自建的服务。</p>
       <p>页面截图和你上传的图片只在发送请求时短暂保留在内存中，并发送给你选择的模型提供商；Lychee-Chat 不会把图片内容持久化到本地存储。重新打开页面后，历史消息中的图片只显示占位提示和文件名。</p>
+      <p>当你导入 DeepSeek 对话时，导出文件只在浏览器内存中解析，原始导出包不会被复制、保存或上传。只有你勾选并确认导入的文字和附件名称会写入本地会话记录；导出包中的图片文件不会被提取。导入的对话不会自动发送，只有你在该会话中继续聊天时，相关上下文才会按普通会话规则发送给你选择的提供商。</p>
       <p>你可以在聊天窗中删除单个会话，或通过移除扩展来清除扩展保存在本地的数据。提供商一侧的数据保留规则由该提供商决定。</p>
     </section>
 
@@ -194,6 +196,7 @@
         <li>不把用户数据用于训练 Lychee-Chat 或任何模型。</li>
         <li>不包含分析 SDK、广告 SDK 或远程代码；扩展运行的所有代码都打包在安装包内。</li>
         <li>不读取与当前对话无关的浏览历史或后台标签页内容。</li>
+        <li>不复制或上传你选择的 DeepSeek 导出包，也不提取其中的原始图片文件。</li>
       </ul>
     </section>
 
