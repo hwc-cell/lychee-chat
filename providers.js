@@ -14,12 +14,18 @@ const NO_IMAGE_PROMPT =
 
 const WEB_SEARCH_PROMPT =
   "本轮已由用户开启联网搜索。遇到需要最新信息、实时数据、新闻、价格、版本、政策或事实核验的问题时，" +
-  "请调用 deepseek_web_search 检索后再回答，不要仅凭训练记忆编造最新信息，也不要声称无法联网。" +
+  "请通过已声明的 deepseek_web_search 服务端工具检索后再回答，不要仅凭训练记忆编造最新信息，也不要声称无法联网。" +
+  "服务端工具会自动执行；不要在正文中描述、伪造或自行编造工具调用。" +
   "如果问题只依赖本轮截图或常识，可以直接回答。";
 
 function buildSystemPrompt(images, contextSummary = "", webSearch = false) {
   const parts = [SYSTEM_PROMPT, images.length ? IMAGE_PROMPT : NO_IMAGE_PROMPT];
-  if (webSearch) parts.push(WEB_SEARCH_PROMPT);
+  if (webSearch) {
+    const now = new Date();
+    const date = now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
+    parts.push(`${WEB_SEARCH_PROMPT}
+当前日期是 ${date}。`);
+  }
   const summary = String(contextSummary || "").trim().slice(0, 8000);
   if (summary) {
     parts.push(
@@ -210,13 +216,19 @@ function normalizeMessages(messages) {
   if (messages.length > 80) throw new Error("消息过多，请先压缩上下文");
   const normalized = messages.map((message) => ({
     role: message.role === "assistant" ? "assistant" : "user",
-    text: String(message.text || "").slice(0, 20000)
+    text: String(message.text || "").slice(0, 20000),
+    serverToolCalls: message.role === "assistant" && Array.isArray(message.serverToolCalls)
+      ? message.serverToolCalls
+      : null
   }));
   const merged = [];
   for (const message of normalized) {
     const previous = merged[merged.length - 1];
     if (previous && previous.role === message.role) {
       previous.text = `${previous.text}\n\n${message.text}`.slice(0, 40000);
+      if (message.serverToolCalls?.length) {
+        previous.serverToolCalls = [...(previous.serverToolCalls || []), ...message.serverToolCalls];
+      }
     } else {
       merged.push({ ...message });
     }
@@ -337,7 +349,11 @@ function buildRequest(provider, model, normalizedMessages, images = [], maxToken
         ]
       };
     }
-    return { role: message.role, content: message.text };
+    const entry = { role: message.role, content: message.text };
+    if (provider.id === "deepseek" && message.role === "assistant" && message.serverToolCalls?.length) {
+      entry.server_tool_calls = message.serverToolCalls;
+    }
+    return entry;
   });
   const body = {
     model,
@@ -506,6 +522,7 @@ export async function streamProviderChat({
   webSearch = false,
   onDelta,
   onSources,
+  onServerToolCalls,
   onSearchStart,
   signal
 }) {
@@ -543,6 +560,8 @@ export async function streamProviderChat({
       collectOpenAiSources(data.choices?.[0], cited, found);
       const sources = selectedSources(cited, found);
       if (sources.length) onSources?.(sources);
+      const calls = data.choices?.[0]?.message?.server_tool_calls;
+      if (Array.isArray(calls) && calls.length) onServerToolCalls?.(calls);
     }
     onDelta?.(text);
     return text;
@@ -551,6 +570,7 @@ export async function streamProviderChat({
   if (!response.body) throw new Error("当前环境不支持读取流式响应");
   let fullText = "";
   let searchStarted = false;
+  let serverToolCalls = null;
   const cited = new Map();
   const found = new Map();
 
@@ -595,6 +615,8 @@ export async function streamProviderChat({
           onSearchStart?.();
         }
         collectOpenAiSources(choice, cited, found);
+        const calls = choice?.delta?.server_tool_calls || choice?.server_tool_calls;
+        if (Array.isArray(calls) && calls.length) serverToolCalls = calls;
       }
       const content = choice?.delta?.content ?? choice?.text;
       if (typeof content === "string") delta = content;
@@ -609,9 +631,13 @@ export async function streamProviderChat({
 
   fullText = fullText.trim();
   if (!fullText) throw new Error("模型没有返回内容");
+  if (webSearch && !serverToolCalls && /(^|\n)\s*<tool_call>/i.test(fullText)) {
+    throw new Error("DeepSeek 没有执行联网搜索，而是返回了工具调用文本。请确认使用官方 api.deepseek.com、deepseek-flash 模型和最新版扩展后重试。");
+  }
   if (format === "openai") {
     const sources = selectedSources(cited, found);
     if (sources.length) onSources?.(sources);
+    if (serverToolCalls) onServerToolCalls?.(serverToolCalls);
   }
   return fullText;
 }

@@ -277,7 +277,10 @@ function serializableSessions() {
               : [],
             sources: Array.isArray(message.sources)
               ? message.sources.slice(0, 8).map(({ title, url }) => ({ title: String(title || "").slice(0, 160), url: String(url || "") }))
-              : []
+              : [],
+            serverToolCalls: Array.isArray(message.serverToolCalls) && message.serverToolCalls.length
+              ? message.serverToolCalls
+              : undefined
           })
     }))
   };
@@ -1526,6 +1529,10 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
     stream.message.streaming = false;
     stream.message.searching = false;
   }
+  if (error && stream.message && /(^|\n)\s*<tool_call>/i.test(stream.message.text)) {
+    stream.session.messages = stream.session.messages.filter((message) => message !== stream.message);
+    stream.message = null;
+  }
   if (!stream.message || !stream.message.text) {
     if (stream.message) {
       stream.session.messages = stream.session.messages.filter((message) => message !== stream.message);
@@ -1589,6 +1596,10 @@ function startChatStream(payload, session) {
       ensureAssistantDraft(stream);
       stream.message.searching = true;
       if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
+    } else if (message.type === "tool-calls") {
+      if (!Array.isArray(message.calls) || !message.calls.length) return;
+      ensureAssistantDraft(stream);
+      stream.message.serverToolCalls = message.calls;
     } else if (message.type === "sources") {
       const sources = normalizeMessageSources(message.sources);
       if (!sources.length) return;
@@ -1701,7 +1712,11 @@ async function sendMessage() {
 
   const history = roleMessages(session)
     .slice(-MAX_HISTORY_MESSAGES)
-    .map((message) => ({ role: message.role, text: message.text }));
+    .map((message) => ({
+      role: message.role,
+      text: message.text,
+      serverToolCalls: message.role === "assistant" ? message.serverToolCalls : undefined
+    }));
   const compressed = session.messages.find((message) => message.type === "compressed");
 
   startChatStream({
