@@ -391,7 +391,8 @@ ext.runtime.onConnect.addListener((port) => {
           maxTokens: 1600,
           signal: controller.signal,
           onDelta: (delta) => post({ type: "delta", text: delta }),
-          onSources: (sources) => post({ type: "sources", sources })
+          onSources: (sources) => post({ type: "sources", sources }),
+          onSearchStart: () => post({ type: "search-start" })
         });
         post({ type: "done", text });
       }

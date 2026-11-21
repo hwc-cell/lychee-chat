@@ -946,7 +946,7 @@ function messageMarkup(message) {
     <div class="message assistant"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
       <span class="assistant-avatar"><img src="assets/icon-32.png" alt=""></span>
       <div class="message-body">
-        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
+        <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
         <div class="bubble${message.streaming ? " is-streaming" : ""}">${formatAssistantText(message.text)}</div>
         ${messageSourcesMarkup(message)}
       </div>
@@ -1483,6 +1483,7 @@ function ensureAssistantDraft(stream) {
     time: nowTime(),
     model: stream.modelLabel,
     streaming: true,
+    searching: false,
     streamId: makeId(),
     sources: []
   };
@@ -1521,7 +1522,10 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
       stream.session.messages.push(stream.message);
     }
   }
-  if (stream.message) stream.message.streaming = false;
+  if (stream.message) {
+    stream.message.streaming = false;
+    stream.message.searching = false;
+  }
   if (!stream.message || !stream.message.text) {
     if (stream.message) {
       stream.session.messages = stream.session.messages.filter((message) => message !== stream.message);
@@ -1581,11 +1585,16 @@ function startChatStream(payload, session) {
       ensureAssistantDraft(stream);
       stream.message.text += delta;
       renderStreamUpdate(stream);
+    } else if (message.type === "search-start") {
+      ensureAssistantDraft(stream);
+      stream.message.searching = true;
+      if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
     } else if (message.type === "sources") {
       const sources = normalizeMessageSources(message.sources);
       if (!sources.length) return;
       ensureAssistantDraft(stream);
       stream.message.sources = sources;
+      stream.message.searching = false;
       if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
     } else if (message.type === "done") {
       finalizeStream(stream, { fullText: String(message.text || "") });

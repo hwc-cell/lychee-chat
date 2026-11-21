@@ -6,7 +6,7 @@
 
 Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。点击工具栏图标后，它会在当前网页右上角打开一个可拖动的聊天窗，让你与支持视觉能力的模型讨论当前页面，并可选择在每轮对话中附带页面截图。
 
-- 当前版本：`0.5.5`
+- 当前版本：`0.5.6`
 - 运行环境：Chrome 116 及以上；Firefox 142 及以上（本地临时加载或 AMO）
 - 模型模式：自带 API Key（BYOK）或本地模型
 - 许可证：[MIT](LICENSE)
@@ -35,8 +35,9 @@ Lychee-Chat 是一个面向网页阅读与设计评审的浏览器 AI 助手。�
 - 开启后使用 DeepSeek 服务端工具 `deepseek_web_search`，由模型判断本轮是否搜索
 - 回答中的引用来源会显示在消息下方
 - 搜索由 DeepSeek 服务端执行；开关不会出现在其他提供商下
+- 开启时会显式使用非思考搜索模式，并提示模型在需要最新信息时检索
 
-接入方式遵循 [DeepSeek 联网工具文档](https://api-docs.deepseek.com/zh-cn/guides/web_tools/)。
+DeepSeek 不允许客户端强制调用服务端搜索，是否搜索由模型决定。接入方式遵循 [DeepSeek 联网工具文档](https://api-docs.deepseek.com/zh-cn/guides/web_tools/)。
 
 ### 模型与提供商
 
