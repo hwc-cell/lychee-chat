@@ -1,4 +1,4 @@
-import { fetchProviderModels, runProviderChat, streamProviderChat, supportsDeepSeekWebSearch, deepseekWebSearch } from "./providers.js";
+import { fetchProviderModels, runProviderChat, streamProviderChat, supportsDeepSeekWebSearch } from "./providers.js";
 
 const ext = globalThis.browser ?? globalThis.chrome;
 
@@ -202,41 +202,6 @@ async function getActiveProvider() {
   };
 }
 
-function cleanDeepseekQuery(text) {
-  return String(text || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^(?:(?:你(?:帮我|帮忙)?搜(?:一下|索)?|你查(?:一下)?|可以(?:帮我|帮忙)?搜(?:一下|索)?|请|麻烦|帮我|帮忙|给我|继续|重新|再搜一下|再搜索|再查一下|联网搜索|联网|搜索|搜一下|搜一搜|再)[\s：:，,、]*)+/i, "")
-    .trim();
-}
-
-function isContinuationQuestion(text) {
-  return /^(再试(一下|试)?|再搜(一下|索)?|重新搜(索)?|重试|继续|接着|再来(一次)?|重来|试试|试一下|再查(一下)?|换一个|换个角度)[\s。.!！?？]*$/i.test(text);
-}
-
-function deepseekSearchIntent(messages) {
-  const userTexts = (Array.isArray(messages) ? messages : [])
-    .filter((item) => item?.role === "user" && typeof item.text === "string")
-    .map((item) => item.text.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
-  if (!userTexts.length) return { query: "", question: "" };
-  const latest = userTexts[userTexts.length - 1];
-  let question = latest;
-  let query = cleanDeepseekQuery(latest);
-  if (!query || isContinuationQuestion(latest)) {
-    for (let index = userTexts.length - 2; index >= 0; index -= 1) {
-      const previousQuery = cleanDeepseekQuery(userTexts[index]);
-      if (previousQuery) {
-        question = userTexts[index];
-        query = previousQuery;
-        break;
-      }
-    }
-  }
-  if (!query) query = latest;
-  return { query: query.slice(0, 128), question: question.slice(0, 128) };
-}
-
 async function prepareChatRequest(message) {
   const provider = await getActiveProvider();
   if (provider.format === "demo") {
@@ -267,7 +232,6 @@ async function prepareChatRequest(message) {
     ? message.contextSummary.trim().slice(0, 8000)
     : "";
   const webSearch = message.webSearch === true && supportsDeepSeekWebSearch(provider, provider.selectedModel);
-  const searchIntent = webSearch ? deepseekSearchIntent(message.messages) : { query: "", question: "" };
   const thinking = provider.id === "deepseek" && (provider.format || "openai") === "openai"
     ? message.thinking === true
     : null;
@@ -280,8 +244,6 @@ async function prepareChatRequest(message) {
     attachments,
     contextSummary,
     webSearch,
-    searchQuery: searchIntent.query,
-    searchQuestion: searchIntent.question,
     thinking
   };
 }
@@ -361,11 +323,6 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
           providerName: prepared.provider.name || "Lychee Demo"
         };
       }
-      let searchContext = "";
-      if (prepared.webSearch) {
-        const search = await deepseekWebSearch(prepared.provider, prepared.searchQuery, prepared.searchQuestion);
-        searchContext = search.context;
-      }
       const text = await runProviderChat({
         provider: prepared.provider,
         model: prepared.model,
@@ -373,7 +330,7 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
         screenshotDataUrl: prepared.screenshotDataUrl,
         attachments: prepared.attachments,
         maxTokens: 1600,
-        searchContext,
+        webSearch: prepared.webSearch,
         thinking: prepared.thinking
       });
       return {
@@ -428,16 +385,6 @@ ext.runtime.onConnect.addListener((port) => {
         }
         post({ type: "done", text: DEMO_REPLY_TEXT });
       } else {
-        let searchContext = "";
-        if (prepared.webSearch) {
-          post({ type: "search-start" });
-          const search = await deepseekWebSearch(prepared.provider, prepared.searchQuery, prepared.searchQuestion);
-          if (closed || controller.signal.aborted) {
-            throw new DOMException("Aborted", "AbortError");
-          }
-          post({ type: "sources", sources: search.sources });
-          searchContext = search.context;
-        }
         if (prepared.thinking) post({ type: "thinking-start" });
         const text = await streamProviderChat({
           provider: prepared.provider,
@@ -446,15 +393,15 @@ ext.runtime.onConnect.addListener((port) => {
           screenshotDataUrl: prepared.screenshotDataUrl,
           attachments: prepared.attachments,
           contextSummary: prepared.contextSummary,
-          webSearch: false,
-          searchContext,
+          webSearch: prepared.webSearch,
           thinking: prepared.thinking,
           maxTokens: 1600,
           signal: controller.signal,
           onDelta: (delta) => post({ type: "delta", text: delta }),
           onReasoningDelta: (delta) => post({ type: "reasoning", text: delta }),
           onSources: (sources) => post({ type: "sources", sources }),
-          onServerToolCalls: (calls) => post({ type: "tool-calls", calls })
+          onServerToolCalls: (calls) => post({ type: "tool-calls", calls }),
+          onSearchStart: () => post({ type: "search-start" })
         });
         post({ type: "done", text });
       }
