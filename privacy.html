@@ -148,9 +148,9 @@
   <h1>隐私政策</h1>
   <p class="lead">Lychee-Chat 是一个运行在 Chrome 或 Firefox 中的浏览器扩展，让你与支持视觉能力的 AI 模型讨论当前页面，并在每一轮对话中按需附带页面截图。</p>
   <div class="meta">
-    <span>生效日期：2026-11-21</span>
+    <span>生效日期：2026-11-24</span>
     <span>适用产品：Lychee-Chat 浏览器扩展（Chrome / Firefox）</span>
-    <span>版本：0.6.1</span>
+    <span>版本：0.6.2</span>
   </div>
 
   <article>
@@ -168,6 +168,7 @@
         <li><strong>当前页面内容：</strong>截图由浏览器的可见标签页捕获能力生成，扩展不读取完整浏览历史。</li>
         <li><strong>聊天内容：</strong>你输入的文本和所选模型返回的文本。</li>
         <li><strong>导入的对话：</strong>你主动选择导入的 DeepSeek 导出文件，以及你勾选保留的对话文字和附件名称。</li>
+        <li><strong>模型视觉检测：</strong>你点击“获取列表”且已填写 API Key 时，扩展会向新发现或待确认的模型发送一张内置的固定测试图片和简短问题，用于判断模型是否支持图片输入。该图片不是你的页面截图或个人图片。</li>
         <li><strong>配置信息：</strong>所选提供商、Base URL、模型、API Key，以及本地保存的会话记录。</li>
       </ul>
     </section>
@@ -187,6 +188,7 @@
       <p>预置提供商可能包括：月之暗面、DeepSeek、阿里云百炼、智谱、豆包/火山方舟、MiniMax、小米 MiMo、硅基流动、Anthropic、OpenAI、Google Gemini、xAI、OpenRouter，以及本地运行的 Ollama 或 LM Studio。自定义提供商的地址由你填写。</p>
       <p>当你主动开启 DeepSeek 联网搜索时，所选模型可以通过 DeepSeek 服务端工具检索公开网页；是否实际搜索由模型判断，搜索请求由 DeepSeek 服务端执行。Lychee-Chat 开发者服务器不接收检索词或搜索结果。回答引用的来源会随会话保存在本机。</p>
       <p>开启“深度思考”时，DeepSeek 返回的思考过程会随会话保存在本机，用于展开和折叠展示；它不会作为后续请求的上下文再次发送给模型。</p>
+      <p>获取模型列表时，模型视觉检测的测试图片、测试问题和模型回复会发送给对应提供商 API。检测结果（是否支持图片输入）只保存在本地配置中，不会写入聊天记录。</p>
       <p>这些第三方服务会按照各自的隐私政策和服务条款处理数据。使用前请阅读对应提供商的条款。Lychee-Chat 不控制第三方的处理方式。</p>
       <p>内置的“Lychee Demo”演示模式不会请求任何外部接口，只返回本地预设的演示回复。</p>
     </section>

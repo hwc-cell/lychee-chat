@@ -1,6 +1,6 @@
 # Lychee-Chat · Chrome Web Store 发布指南
 
-本文对应版本 `0.6.1`，目标是发布一个 Chrome Manifest V3 扩展。
+本文对应版本 `0.6.2`，目标是发布一个 Chrome Manifest V3 扩展。
 
 ## 1. 本地安装与验收
 
@@ -79,22 +79,22 @@ GitHub Pages 示例：
   4. 会话管理抽屉
   5. 上下文压缩与模型窗口设置
 
-`store/` 里仍是旧版界面的宣传图，不能直接作为 0.6.1 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
+`store/` 里仍是旧版界面的宣传图，不能直接作为 0.6.2 的商店截图。公开上架前请安装当前版本，重新截取 1280×800 的设置页、聊天窗和深色模式画面。
 
 ### 2.4 打包 ZIP
 
 在项目根目录中执行（不要把整个外层文件夹打进去）：
 
 ```bash
-rm -f ../lychee-chat-0.6.1.zip
-zip -r ../lychee-chat-0.6.1.zip . \
+rm -f ../lychee-chat-0.6.2.zip
+zip -r ../lychee-chat-0.6.2.zip . \
   -x "dev-*" "preview-*" "store/*" "PUBLISHING.md" "*.zip" ".DS_Store" "dev-chrome-mock.js"
 ```
 
 检查 ZIP 根目录必须直接看到 `manifest.json`：
 
 ```bash
-unzip -l ../lychee-chat-0.6.1.zip | head -30
+unzip -l ../lychee-chat-0.6.2.zip | head -30
 ```
 
 不要把以下内容发布出去：
@@ -138,6 +138,7 @@ unzip -l ../lychee-chat-0.6.1.zip | head -30
 > - 会话搜索、置顶、重命名、删除
 > - 导入 DeepSeek 官方导出的对话（ZIP / 单会话 JSON），本机解析、搜索与全选导入
 > - DeepSeek 联网搜索开关与引用来源展示
+> - 获取模型列表时自动检测新模型是否支持图片输入
 > - 安全 Markdown 渲染：标题、列表、表格、引用、代码块，代码可一键复制
 > - 每个模型预设上下文窗口，并可在设置中调整用量估算窗口
 > - 浮窗可拖动，位置自动记忆；页面悬浮入口可隐藏
@@ -162,7 +163,7 @@ unzip -l ../lychee-chat-0.6.1.zip | head -30
 ### 商店图标与截图
 
 - 图标：上传 `assets/icon-128.png`
-- 截图：必须使用 0.6.1 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
+- 截图：必须使用 0.6.2 当前界面重新截取的 1280×800 图片，不要沿用旧版 store 截图
 - 不要使用带 API Key、个人聊天或真实用户数据的截图
 
 ## 4. 隐私标签页怎么填

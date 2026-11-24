@@ -399,7 +399,7 @@ function extractText(format, data) {
   return data.choices?.[0]?.text || "";
 }
 
-export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600, webSearch = false, thinking = null }) {
+export async function runProviderChat({ provider, model, messages, screenshotDataUrl, attachments = [], maxTokens = 1600, webSearch = false, thinking = null, timeoutMs = 90000 }) {
   if (!model) throw new Error("还没有选择模型");
   const normalizedMessages = normalizeMessages(messages);
   const images = [];
@@ -410,7 +410,7 @@ export async function runProviderChat({ provider, model, messages, screenshotDat
     if (image) images.push(image);
   }
   const { url, options } = buildRequest(provider, model, normalizedMessages, images, maxTokens, { webSearch, thinking });
-  const data = await fetchJson(url, options, 90000);
+  const data = await fetchJson(url, options, timeoutMs);
   if (data.error) {
     throw new Error(data.error.message || "模型请求失败");
   }

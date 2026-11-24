@@ -56,7 +56,7 @@
         <span class="theme-icon" data-theme-icon></span>
         <span data-theme-label>跟随系统</span>
       </button>
-      <p class="version">Lychee-Chat v0.6.1 · Chrome / Firefox</p>
+      <p class="version">Lychee-Chat v0.6.2 · Chrome / Firefox</p>
     </div>
   </aside>
 
@@ -155,7 +155,7 @@
               <div class="models-head">
                 <div class="field-label"><label>模型</label><span class="field-note" id="modelCountNote"></span></div>
                 <div class="models-actions">
-                  <button class="btn btn-tiny btn-secondary" id="fetchBtn" type="button">
+                  <button class="btn btn-tiny btn-secondary" id="fetchBtn" type="button" title="获取模型列表；新模型会用固定测试图片自动检测视觉能力">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></svg>
                     获取列表
                   </button>
@@ -175,6 +175,7 @@
                 <label class="switch-line"><input type="checkbox" id="visionFilter" checked><span class="switch"></span><span>仅显示视觉模型</span></label>
                 <span class="hidden-note" id="hiddenNote"></span>
               </div>
+              <p class="hint">获取列表时，新发现的模型会自动用固定测试图片检测图片输入能力（需要 API Key，可能消耗少量 Token）。</p>
             </div>
           </div>
 

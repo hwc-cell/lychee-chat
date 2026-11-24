@@ -1,4 +1,5 @@
 import { fetchProviderModels, runProviderChat, streamProviderChat, supportsDeepSeekWebSearch } from "./providers.js";
+import { VISION_TEST_IMAGE, VISION_TEST_PROMPT, classifyVisionResponse } from "./vision-test.js";
 
 const ext = globalThis.browser ?? globalThis.chrome;
 
@@ -286,6 +287,43 @@ ext.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })()
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message.type === "LYCHEE_TEST_VISION") {
+    (async () => {
+      const provider = sanitizeProviderDraft(message.provider);
+      if (provider.format === "demo") return { vision: true, skipped: true };
+      await assertHostPermission(provider.baseUrl);
+      const model = String(message.model || "").trim();
+      if (!model) throw new Error("缺少模型 ID");
+      if (providerNeedsApiKey(provider) && !provider.apiKey) {
+        return { vision: null, skipped: true };
+      }
+      const thinking = provider.id === "deepseek" && provider.format === "openai" ? false : null;
+      try {
+        const text = await runProviderChat({
+          provider,
+          model,
+          messages: [{ role: "user", text: VISION_TEST_PROMPT }],
+          screenshotDataUrl: VISION_TEST_IMAGE,
+          maxTokens: 64,
+          thinking,
+          timeoutMs: 25000
+        });
+        return { ...classifyVisionResponse(text), reply: String(text).slice(0, 160) };
+      } catch (error) {
+        const detail = error.message || String(error);
+        const imageRelated = /(image|图片|图像|vision|multimodal|modality|content[\s-]?type|媒体|附件)/i.test(detail);
+        return {
+          vision: imageRelated ? false : null,
+          reason: imageRelated ? "image-rejected" : "error",
+          error: detail.slice(0, 300)
+        };
+      }
+    })()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error.message || String(error) }));
     return true;
   }
 

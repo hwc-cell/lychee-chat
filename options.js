@@ -369,9 +369,13 @@ function modelRowMarkup(provider, model) {
   const unknown = model.vision === null;
   const visionLabel = model.vision === true ? "视觉" : model.vision === false ? "不支持" : "待确认";
   const visionTitle = model.vision === true
-    ? "已确认支持图片输入，点击可撤销确认"
+    ? model.visionAutoTested
+      ? "已通过自动图像测试，点击可撤销确认"
+      : "已确认支持图片输入，点击可撤销确认"
     : model.vision === false
-      ? "该模型被标记为不支持图片输入"
+      ? model.visionAutoTested
+        ? "自动图像测试未通过；如果确认支持图片输入，可勾选启用"
+        : "该模型被标记为不支持图片输入"
       : "请确认该模型是否支持图片输入";
   return `
     <div class="model-row${selected ? " is-selected" : ""}${blocked ? " is-blocked" : ""}${unknown ? " is-unconfirmed" : ""}"
@@ -388,7 +392,7 @@ function modelRowMarkup(provider, model) {
         </span>
       </label>
       <label class="vision-toggle" title="${visionTitle}">
-        <input type="checkbox" data-vision${model.vision === true ? " checked" : ""}${model.vision === false ? " disabled" : ""}>
+        <input type="checkbox" data-vision${model.vision === true ? " checked" : ""}${model.vision === false && !model.visionAutoTested ? " disabled" : ""}>
         <span class="vision-pill">${icons.eye}<span>${visionLabel}</span></span>
       </label>
     </div>`;
@@ -682,6 +686,7 @@ function buildStoredSettings() {
         id: model.id,
         label: model.label || model.id,
         vision: model.vision === true ? true : model.vision === false ? false : null,
+        visionAutoTested: Boolean(model.visionAutoTested),
         contextWindow: normalizeContextWindow(model.contextWindow) || contextWindowForModel(model.id)
       }))
     };
@@ -817,6 +822,74 @@ function mergeFetchedModels(provider, fetched) {
   if (provider.models.length > 200) provider.models = provider.models.slice(0, 200);
 }
 
+const MAX_AUTO_VISION_TESTS = 24;
+const AUTO_VISION_CONCURRENCY = 3;
+
+async function autoTestVisionModels(provider, models, remaining) {
+  const total = models.length;
+  let cursor = 0;
+  let completed = 0;
+  let supported = 0;
+  let unsupported = 0;
+  let inconclusive = 0;
+
+  const paintProgress = () => {
+    if (activeProvider()?.id !== provider.id) return;
+    renderModels();
+    updateSidebar(provider);
+    $("#modelCountNote").textContent = `自动检测图像 ${completed}/${total}`;
+  };
+  paintProgress();
+
+  const worker = async () => {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= total) break;
+      const model = models[index];
+      let response = null;
+      try {
+        response = await ext.runtime.sendMessage({
+          type: "LYCHEE_TEST_VISION",
+          provider: providerDraft(provider),
+          model: model.id
+        });
+      } catch {}
+
+      if (response?.ok && typeof response.vision === "boolean") {
+        model.vision = response.vision;
+        model.visionAutoTested = true;
+        if (response.vision) {
+          supported += 1;
+          if (!provider.selectedModel) provider.selectedModel = model.id;
+        } else {
+          unsupported += 1;
+          if (provider.selectedModel === model.id) {
+            const fallback = (provider.models || []).find((item) => item.id !== model.id && item.vision === true);
+            provider.selectedModel = fallback ? fallback.id : null;
+          }
+        }
+      } else {
+        inconclusive += 1;
+        model.visionAutoTested = true;
+      }
+      completed += 1;
+      markDirty();
+      paintProgress();
+      renderProviderGrid();
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(AUTO_VISION_CONCURRENCY, total) }, worker));
+  if (activeProvider()?.id === provider.id) {
+    renderModels();
+    updateSidebar(provider);
+  } else {
+    renderProviderGrid();
+  }
+  return `，自动检测 ${completed} 个图像能力（${supported} 支持 / ${unsupported} 不支持${inconclusive ? ` / ${inconclusive} 未确定` : ""}）${remaining ? `，还有 ${remaining} 个待后续扫描` : ""}`;
+}
+
 async function fetchModels() {
   const provider = activeProvider();
   const validation = validateConnection(provider);
@@ -836,17 +909,35 @@ async function fetchModels() {
       provider: providerDraft(provider)
     });
     if (!response?.ok) throw new Error(response?.error || "获取模型失败");
+    const fetched = response.models || [];
+    const existingIds = new Set((provider.models || []).map((model) => model.id));
+    const fetchedIds = new Set(fetched.map((model) => String(model.id)));
     const stillActive = activeProvider()?.id === provider.id;
-    mergeFetchedModels(provider, response.models || []);
+    mergeFetchedModels(provider, fetched);
     markDirty();
     renderProviderGrid();
     if (stillActive) {
       renderModels();
       updateSidebar(provider);
     }
+
+    let autoNote = "";
+    if (provider.apiKey?.trim()) {
+      const candidates = (provider.models || []).filter((model) =>
+        fetchedIds.has(model.id) &&
+        model.vision !== false &&
+        (!existingIds.has(model.id) || model.vision === null)
+      ).sort((a, b) => Number(existingIds.has(a.id)) - Number(existingIds.has(b.id)));
+      const limited = candidates.slice(0, MAX_AUTO_VISION_TESTS);
+      const remaining = candidates.length - limited.length;
+      if (limited.length) {
+        autoNote = await autoTestVisionModels(provider, limited, remaining);
+      }
+    }
+
     const pending = (provider.models || []).filter((model) => model.vision === null).length;
     const prefix = stillActive ? "" : `${provider.name}：`;
-    showToast(`${prefix}已获取 ${(response.models || []).length} 个模型${pending ? "，请确认未知模型的视觉能力" : ""}`);
+    showToast(`${prefix}已获取 ${fetched.length} 个模型${autoNote}${pending ? "，还有模型待确认" : ""}`);
   } catch (error) {
     if (activeProvider()?.id === provider.id) renderModels();
     const prefix = activeProvider()?.id === provider.id ? "" : `${provider.name}：`;
@@ -944,6 +1035,7 @@ function bindEvents() {
 
     if (event.target.matches("[data-vision]")) {
       model.vision = event.target.checked ? true : null;
+      model.visionAutoTested = false;
       if (event.target.checked && !provider.selectedModel) {
         provider.selectedModel = model.id;
       }
