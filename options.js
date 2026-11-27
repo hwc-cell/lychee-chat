@@ -376,7 +376,9 @@ function modelRowMarkup(provider, model) {
       ? model.visionAutoTested
         ? "自动图像测试未通过；如果确认支持图片输入，可勾选启用"
         : "该模型被标记为不支持图片输入"
-      : "请确认该模型是否支持图片输入";
+      : model.visionAutoTested
+        ? "自动图像测试未确定，请手动确认"
+        : "请确认该模型是否支持图片输入";
   return `
     <div class="model-row${selected ? " is-selected" : ""}${blocked ? " is-blocked" : ""}${unknown ? " is-unconfirmed" : ""}"
       data-model-id="${esc(model.id)}">
@@ -871,7 +873,12 @@ async function autoTestVisionModels(provider, models, remaining) {
         }
       } else {
         inconclusive += 1;
+        if (model.vision === true) model.vision = null;
         model.visionAutoTested = true;
+        if (provider.selectedModel === model.id) {
+          const fallback = (provider.models || []).find((item) => item.id !== model.id && item.vision === true);
+          provider.selectedModel = fallback ? fallback.id : null;
+        }
       }
       completed += 1;
       markDirty();

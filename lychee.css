@@ -4406,3 +4406,105 @@ html[data-theme] .thinking-copy {
     animation: none;
   }
 }
+
+
+/* Readability and keyboard-access pass */
+html[data-theme] .session-row:focus-within .session-actions {
+  opacity: 1;
+}
+
+html[data-theme] .session-action {
+  width: 24px;
+  height: 24px;
+}
+
+html[data-theme] .session-row-title {
+  font-size: 11px;
+}
+
+html[data-theme] .session-row-preview,
+html[data-theme] .session-row-meta,
+html[data-theme] .session-group-label {
+  font-size: 9px;
+}
+
+html[data-theme] .message-meta {
+  font-size: 10px;
+}
+
+html[data-theme] .message-sources-label {
+  font-size: 8.5px;
+}
+
+html[data-theme] .message-sources a {
+  min-height: 24px;
+  padding: 4px 8px;
+  font-size: 9px;
+}
+
+html[data-theme] .message-sources a span {
+  width: 14px;
+  height: 14px;
+  font-size: 7px;
+}
+
+html[data-theme] .thinking-head {
+  padding: 7px 10px;
+  font-size: 9px;
+}
+
+html[data-theme] .thinking-copy {
+  font-size: 10px;
+}
+
+html[data-theme] .composer-meta,
+html[data-theme] .capture-toggle,
+html[data-theme] .mode-toggle,
+html[data-theme] .composer-hint,
+html[data-theme] .settings-link {
+  font-size: 9px;
+}
+
+html[data-theme] .capture-toggle {
+  min-height: 24px;
+}
+
+html[data-theme] .mode-toggle {
+  min-height: 24px;
+  margin: 0;
+  padding: 3px 8px;
+}
+
+html[data-theme] .send-btn {
+  width: 34px;
+  height: 34px;
+}
+
+html[data-theme] .attach-btn {
+  width: 30px;
+  height: 30px;
+}
+
+html[data-theme] .drawer-import {
+  font-size: 9px;
+}
+
+html[data-theme] .import-row-title {
+  font-size: 11px;
+}
+
+html[data-theme] .import-row-meta,
+html[data-theme] .import-selected {
+  font-size: 8.5px;
+}
+
+html[data-theme] .import-limit {
+  font-size: 8px;
+}
+
+@media (hover: none) {
+  html[data-theme] .session-action {
+    width: 28px;
+    height: 28px;
+  }
+}

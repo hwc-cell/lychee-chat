@@ -1255,29 +1255,43 @@ function openOptionsPage() {
 function openSessions() {
   closeContext();
   renderSessions();
+  sessionsDrawer.inert = false;
   sessionsDrawer.classList.add("is-open");
   sessionsDrawer.setAttribute("aria-hidden", "false");
   sessionScrim.classList.add("is-open");
+  requestAnimationFrame(() => {
+    if (sessionsDrawer.classList.contains("is-open")) $("#closeSessions").focus();
+  });
 }
 
 function closeSessions() {
+  const hadFocus = sessionsDrawer.contains(document.activeElement);
   sessionsDrawer.classList.remove("is-open");
   sessionsDrawer.setAttribute("aria-hidden", "true");
+  sessionsDrawer.inert = true;
   sessionScrim.classList.remove("is-open");
+  if (hadFocus) $("#sessionsBtn").focus();
 }
 
 function openContext() {
   closeSessions();
   updateContextUI();
+  contextPopover.inert = false;
   contextPopover.classList.add("is-open");
   contextPopover.setAttribute("aria-hidden", "false");
   contextStrip.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => {
+    if (contextPopover.classList.contains("is-open")) $("#closeContext").focus();
+  });
 }
 
 function closeContext() {
+  const hadFocus = contextPopover.contains(document.activeElement);
   contextPopover.classList.remove("is-open");
   contextPopover.setAttribute("aria-hidden", "true");
+  contextPopover.inert = true;
   contextStrip.setAttribute("aria-expanded", "false");
+  if (hadFocus) contextStrip.focus();
 }
 
 function createSession() {
@@ -1799,6 +1813,24 @@ async function sendMessage() {
   }, session);
 }
 
+function trapFocusWithin(event, container) {
+  const focusables = [...container.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href], [tabindex]:not([tabindex='-1'])")]
+    .filter((element) => element.getClientRects().length);
+  if (!focusables.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (event.shiftKey && (document.activeElement === first || !container.contains(document.activeElement))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !container.contains(document.activeElement))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function bindEvents() {
   bindWindowDrag();
   $("#sessionsBtn").addEventListener("click", openSessions);
@@ -1829,21 +1861,11 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Tab" && importPanel.classList.contains("is-open")) {
-      const focusables = [...importPanel.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href]")]
-        .filter((element) => element.getClientRects().length);
-      if (!focusables.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !importPanel.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !importPanel.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapFocusWithin(event, importPanel);
+      return;
+    }
+    if (event.key === "Tab" && sessionsDrawer.classList.contains("is-open")) {
+      trapFocusWithin(event, sessionsDrawer);
       return;
     }
     if (event.key !== "Escape") return;

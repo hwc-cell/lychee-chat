@@ -48,7 +48,7 @@ a { color: inherit; text-decoration: none; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
-:focus-visible { outline: 2px solid #5f7cff; outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .app {
   display: grid;
@@ -714,7 +714,7 @@ h1 {
   background: var(--lime-soft);
   color: #3c4b21;
 }
-.vision-toggle input:focus-visible + .vision-pill { outline: 2px solid #5f7cff; outline-offset: 2px; }
+.vision-toggle input:focus-visible + .vision-pill { outline: 2px solid var(--accent); outline-offset: 2px; }
 .vision-toggle input:disabled + .vision-pill { cursor: not-allowed; opacity: .55; }
 .model-row.is-blocked .model-title,
 .model-row.is-blocked .model-id { color: var(--faint); }
@@ -781,7 +781,7 @@ h1 {
 .switch-line input:checked + .switch { background: var(--ink); }
 .switch-line input:checked + .switch::after { transform: translateX(14px); background: var(--lime); }
 .switch-line input:disabled + .switch { opacity: .55; }
-.switch-line input:focus-visible + .switch { outline: 2px solid #5f7cff; outline-offset: 2px; }
+.switch-line input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Custom model */
 .custom-model {
@@ -1138,7 +1138,7 @@ h1 {
 .toggle-row > input { position: absolute; opacity: 0; pointer-events: none; }
 .toggle-row > input:checked + .switch { background: var(--ink); }
 .toggle-row > input:checked + .switch::after { transform: translateX(14px); background: var(--lime); }
-.toggle-row > input:focus-visible + .switch { outline: 2px solid #5f7cff; outline-offset: 2px; }
+.toggle-row > input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Privacy */
 .privacy-list { margin-bottom: 14px; padding: 4px 22px; }
@@ -1366,4 +1366,24 @@ h1 {
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+
+/* Readability pass */
+.model-id,
+.model-context {
+  font-size: 9.5px;
+}
+
+.field-note {
+  font-size: 9.5px;
+}
+
+.hint {
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.vision-pill {
+  font-size: 8px;
 }
