@@ -59,6 +59,7 @@ let searchQuery = "";
 let minimizeIcon = null;
 let toastTimer = null;
 const pendingCaptures = new Map();
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
 
 const chatWindow = $("#chatWindow");
 const chatLauncher = $("#chatLauncher");
@@ -127,6 +128,66 @@ let deepseekBusy = false;
 
 function activeSession() {
   return sessionsState.items.find((session) => session.id === sessionsState.activeId) || null;
+}
+
+function markMessageEntering(message) {
+  if (message) message.enterAt = performance.now();
+}
+
+function animateConversationSwap() {
+  if (motionQuery.matches || messagesEl.querySelector(".empty-state")) return;
+  messagesEl.classList.remove("is-swapping");
+  void messagesEl.offsetWidth;
+  messagesEl.classList.add("is-swapping");
+  messagesEl.addEventListener("animationend", function clear(event) {
+    if (event.target !== messagesEl) return;
+    messagesEl.classList.remove("is-swapping");
+    messagesEl.removeEventListener("animationend", clear);
+  });
+}
+
+function animateReveal(node, opening) {
+  if (!node) return;
+  const token = (node.__revealToken || 0) + 1;
+  node.__revealToken = token;
+  if (motionQuery.matches || typeof node.animate !== "function") {
+    node.hidden = !opening;
+    return;
+  }
+  node.getAnimations().forEach((animation) => animation.cancel());
+  if (opening) {
+    node.hidden = false;
+    const height = node.getBoundingClientRect().height;
+    const marginTop = parseFloat(getComputedStyle(node).marginTop) || 0;
+    node.style.overflow = "hidden";
+    const animation = node.animate([
+      { height: "0px", marginTop: "0px", opacity: 0, transform: "translateY(-3px)" },
+      { height: `${height}px`, marginTop: `${marginTop}px`, opacity: 1, transform: "none" }
+    ], { duration: 230, easing: "cubic-bezier(.16, 1, .3, 1)" });
+    const cleanup = () => {
+      if (node.__revealToken !== token) return;
+      node.style.overflow = "";
+    };
+    animation.addEventListener("finish", cleanup);
+    animation.addEventListener("cancel", cleanup);
+  } else {
+    const height = node.getBoundingClientRect().height;
+    const marginTop = parseFloat(getComputedStyle(node).marginTop) || 0;
+    node.style.overflow = "hidden";
+    const animation = node.animate([
+      { height: `${height}px`, marginTop: `${marginTop}px`, opacity: 1, transform: "none" },
+      { height: "0px", marginTop: "0px", opacity: 0, transform: "translateY(-2px)" }
+    ], { duration: 150, easing: "cubic-bezier(.4, 0, 1, 1)" });
+    animation.addEventListener("finish", () => {
+      if (node.__revealToken !== token) return;
+      node.hidden = true;
+      node.style.overflow = "";
+    });
+    animation.addEventListener("cancel", () => {
+      if (node.__revealToken !== token) return;
+      node.style.overflow = "";
+    });
+  }
 }
 
 function roleMessages(session) {
@@ -637,6 +698,7 @@ async function runDeepSeekImport() {
     sessionsState.items.push(...imported);
     sessionsState.activeId = [...imported].sort((a, b) => b.updatedAt - a.updatedAt)[0].id;
     updateAll();
+    animateConversationSwap();
 
     try {
       await saveSessions({ revived: [...importedIds] });
@@ -973,6 +1035,9 @@ function thinkingBlockMarkup(message) {
 }
 
 function messageMarkup(message, index = 0) {
+  const enterAge = Number.isFinite(message.enterAt) ? performance.now() - message.enterAt : Infinity;
+  const entering = enterAge >= 0 && enterAge < 380;
+  const enterStyle = entering ? ` style="--message-enter-delay:-${Math.round(enterAge)}ms"` : "";
   if (message.type === "compressed") {
     const session = activeSession();
     return `
@@ -991,7 +1056,7 @@ function messageMarkup(message, index = 0) {
   if (message.role === "user") {
     const text = esc(message.text).replace(/\n/g, "<br>");
     return `
-      <div class="message user">
+      <div class="message user${entering ? " is-entering" : ""}"${enterStyle}>
         <div class="message-body">
           <div class="message-meta">你 · ${esc(message.time || "")}</div>
           <div class="bubble">${text}${message.screenshot ? attachmentMarkup(message) : ""}${uploadedAttachmentsMarkup(message)}</div>
@@ -1001,7 +1066,7 @@ function messageMarkup(message, index = 0) {
 
   const showBubble = Boolean(message.text) || !(message.thinking || message.searching);
   return `
-    <div class="message assistant" data-message-index="${index}"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
+    <div class="message assistant${entering ? " is-entering" : ""}"${enterStyle} data-message-index="${index}"${message.streamId ? ` data-stream-id="${esc(message.streamId)}"` : ""}>
       <span class="assistant-avatar"><img src="assets/icon-32.png" alt=""></span>
       <div class="message-body">
         <div class="message-meta">Lychee-Chat · ${esc(message.model || activeModelLabel())} · ${esc(message.time || "")}${message.searching ? '<span class="search-live">联网搜索中…</span>' : ""}${message.streaming ? '<span class="streaming-dot" aria-label="正在生成"></span>' : ""}</div>
@@ -1323,6 +1388,7 @@ function createSession() {
   saveSessions();
   updateAll();
   composerInput.focus();
+  animateConversationSwap();
 }
 
 function selectSession(id) {
@@ -1341,6 +1407,7 @@ function selectSession(id) {
   saveSessions();
   updateAll();
   composerInput.focus();
+  animateConversationSwap();
 }
 
 function deleteSession(id) {
@@ -1362,6 +1429,7 @@ function deleteSession(id) {
   editingSessionId = null;
   saveSessions();
   updateAll();
+  animateConversationSwap();
   showChatToast("会话已删除");
 }
 
@@ -1563,6 +1631,7 @@ function ensureAssistantDraft(stream) {
     streamId: makeId(),
     sources: []
   };
+  markMessageEntering(message);
   stream.session.messages.push(message);
   stream.message = message;
   if (sessionsState.activeId === stream.session.id) renderMessages("bottom");
@@ -1595,6 +1664,7 @@ function finalizeStream(stream, { aborted = false, error = null, fullText = "" }
         model: stream.modelLabel,
         streamId: makeId()
       };
+      markMessageEntering(stream.message);
       stream.session.messages.push(stream.message);
     }
   }
@@ -1776,6 +1846,7 @@ async function sendMessage() {
       dataUrl: attachment.dataUrl
     }))
   };
+  markMessageEntering(userMessage);
   session.messages.push(userMessage);
   if (session.title === "新会话") session.title = truncate(text, 18);
   session.preview = truncate(text, 46);
@@ -2025,7 +2096,7 @@ function bindEvents() {
       const body = block?.querySelector(".thinking-body");
       if (!block || !body) return;
       const opening = body.hidden;
-      body.hidden = !opening;
+      animateReveal(body, opening);
       block.classList.toggle("is-open", opening);
       thinkingButton.setAttribute("aria-expanded", String(opening));
       const container = thinkingButton.closest("[data-message-index]");
@@ -2043,7 +2114,7 @@ function bindEvents() {
       const session = activeSession();
       const summary = compressed.parentElement.querySelector(".compressed-summary");
       const opening = summary.hidden;
-      summary.hidden = !opening;
+      animateReveal(summary, opening);
       compressed.classList.toggle("is-open", opening);
       if (session) session.compressedOpen = opening;
       saveSessions();

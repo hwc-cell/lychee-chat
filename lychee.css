@@ -4508,3 +4508,178 @@ html[data-theme] .import-limit {
     height: 28px;
   }
 }
+
+/* Motion pass: purposeful entrances and press feedback */
+html[data-theme] .message.is-entering .message-body {
+  --message-enter-x: -7px;
+  animation: lychee-message-in .32s var(--ease-out) var(--message-enter-delay, 0s) backwards;
+  transform-origin: left bottom;
+}
+
+html[data-theme] .message.user.is-entering .message-body {
+  --message-enter-x: 10px;
+  transform-origin: right bottom;
+}
+
+html[data-theme] .message.is-entering .assistant-avatar {
+  animation: lychee-avatar-in .32s var(--ease-out) var(--message-enter-delay, 0s) backwards;
+}
+
+@keyframes lychee-message-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--message-enter-x, 0), 7px, 0) scale(.988);
+  }
+}
+
+@keyframes lychee-avatar-in {
+  from { opacity: 0; transform: scale(.82); }
+}
+
+html[data-theme] .empty-state::before {
+  animation: lychee-fade-rise .26s var(--ease-out) .02s backwards;
+}
+
+html[data-theme] .empty-orb {
+  animation: lychee-orb-in .44s var(--ease-out) backwards;
+}
+
+html[data-theme] .empty-state h3 {
+  animation: lychee-fade-rise .36s var(--ease-out) .05s backwards;
+}
+
+html[data-theme] .empty-state p {
+  animation: lychee-fade-rise .36s var(--ease-out) .09s backwards;
+}
+
+html[data-theme] .suggestion-chips button {
+  animation: lychee-fade-rise .32s var(--ease-out) backwards;
+}
+
+html[data-theme] .suggestion-chips button:nth-child(1) { animation-delay: .13s; }
+html[data-theme] .suggestion-chips button:nth-child(2) { animation-delay: .17s; }
+html[data-theme] .suggestion-chips button:nth-child(3) { animation-delay: .21s; }
+
+@keyframes lychee-fade-rise {
+  from { opacity: 0; transform: translateY(7px); }
+}
+
+@keyframes lychee-orb-in {
+  from { opacity: 0; transform: scale(.86); }
+}
+
+html[data-theme] .messages.is-swapping {
+  animation: lychee-conversation-in .3s var(--ease-out) backwards;
+}
+
+@keyframes lychee-conversation-in {
+  from { opacity: 0; transform: translateY(5px); }
+}
+
+html[data-theme] .chat-online::before {
+  animation: lychee-status-in .36s var(--ease-out) .16s backwards;
+}
+
+@keyframes lychee-status-in {
+  from { opacity: .2; transform: scale(.4); }
+}
+
+html[data-theme] .mode-toggle.is-on svg {
+  animation: lychee-icon-pop .22s var(--ease-out) backwards;
+}
+
+@keyframes lychee-icon-pop {
+  from { opacity: .4; transform: scale(.78); }
+}
+
+html[data-theme] .icon-btn {
+  transition: background .16s ease, color .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .drawer-close {
+  transition: background .16s ease, color .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .session-action {
+  transition: background .16s ease, color .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .attach-btn {
+  transition: background .16s ease, color .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .send-btn {
+  transition: background .16s ease, color .16s ease, opacity .18s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .capture-toggle,
+html[data-theme] .mode-toggle {
+  transition: background .16s ease, color .16s ease, border-color .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .drawer-import,
+html[data-theme] .new-session-btn,
+html[data-theme] .compress-btn {
+  transition: background .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .12s var(--ease-out);
+}
+
+html[data-theme] .icon-btn:active,
+html[data-theme] .drawer-close:active,
+html[data-theme] .session-action:active,
+html[data-theme] .attach-btn:active,
+html[data-theme] .capture-toggle:active,
+html[data-theme] .mode-toggle:active {
+  transform: scale(.93);
+}
+
+html[data-theme] .send-btn:not(:disabled):active {
+  transform: translateY(0) scale(.93);
+}
+
+html[data-theme] .drawer-import:active,
+html[data-theme] .new-session-btn:active,
+html[data-theme] .compress-btn:active {
+  transform: scale(.98);
+}
+
+html[data-theme] .suggestion-chips button:active {
+  transform: translateX(1px) scale(.985);
+}
+
+html[data-theme] .message-sources a {
+  transition: border-color .16s ease, color .16s ease, transform .16s var(--ease-out);
+}
+
+html[data-theme] .message-sources a:hover {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] .message.is-entering .message-body,
+  html[data-theme] .message.is-entering .assistant-avatar,
+  html[data-theme] .empty-state::before,
+  html[data-theme] .empty-orb,
+  html[data-theme] .empty-state h3,
+  html[data-theme] .empty-state p,
+  html[data-theme] .suggestion-chips button,
+  html[data-theme] .chat-online::before,
+  html[data-theme] .mode-toggle.is-on svg,
+  html[data-theme] .messages.is-swapping {
+    animation: none;
+  }
+
+  html[data-theme] .icon-btn:active,
+  html[data-theme] .drawer-close:active,
+  html[data-theme] .session-action:active,
+  html[data-theme] .attach-btn:active,
+  html[data-theme] .capture-toggle:active,
+  html[data-theme] .mode-toggle:active,
+  html[data-theme] .send-btn:not(:disabled):active,
+  html[data-theme] .drawer-import:active,
+  html[data-theme] .new-session-btn:active,
+  html[data-theme] .compress-btn:active,
+  html[data-theme] .suggestion-chips button:active,
+  html[data-theme] .message-sources a:hover {
+    transform: none;
+  }
+}

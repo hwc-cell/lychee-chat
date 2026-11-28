@@ -91,10 +91,37 @@
         background: #b33b4d;
       }
       :host([data-theme="dark"]) .launcher .dot { border-color: #1c1c1e; background: #e27784; }
+      .wrap.is-opening {
+        transform-origin: top right;
+        animation: wrap-in .28s cubic-bezier(.16, 1, .3, 1) backwards;
+      }
+      .wrap.is-closing {
+        transform-origin: top right;
+        pointer-events: none;
+        animation: wrap-out .16s cubic-bezier(.4, 0, 1, 1) forwards;
+      }
+      .launcher.is-opening {
+        animation: launcher-in .24s cubic-bezier(.16, 1, .3, 1) backwards;
+      }
+      .launcher:active { transform: scale(.93); transition-duration: .08s; }
+      @keyframes wrap-in {
+        from { opacity: 0; transform: translateY(-8px) scale(.975); }
+      }
+      @keyframes wrap-out {
+        from { opacity: 1; transform: none; }
+        to { opacity: 0; transform: translateY(-6px) scale(.985); }
+      }
+      @keyframes launcher-in {
+        from { opacity: 0; transform: scale(.82); }
+      }
       @media (max-width: 480px) {
         .wrap { top: 8px; right: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); border-radius: 22px; }
         .wrap.is-minimized { height: 56px; }
         .launcher { top: 10px; right: 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wrap, .launcher { animation: none !important; transition: none !important; }
+        .launcher:hover, .launcher:active { transform: none; }
       }
     </style>
     <div class="wrap" hidden>
@@ -114,6 +141,8 @@
   let windowPosition = null;
   let pendingPosition = null;
   let dragState = null;
+  let closeTimer = null;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
   function applyTheme(mode) {
     const dark = mode === "dark" || (mode !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
@@ -162,31 +191,67 @@
     launcher.hidden = !launcherVisible;
   }
 
-  function openChat() {
+  function playAnimation(element, className) {
+    if (reduceMotion.matches) return;
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+    element.addEventListener("animationend", function cleanup(event) {
+      if (event.target !== element) return;
+      element.classList.remove(className);
+      element.removeEventListener("animationend", cleanup);
+    });
+  }
+
+  function openChat(animate = true) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    const wasClosed = wrap.hidden || wrap.classList.contains("is-closing");
+    wrap.classList.remove("is-closing");
+    wrap.inert = false;
     if (minimized) {
       setMinimized(false);
       postToChat({ type: "expand" });
     }
     wrap.hidden = false;
+    launcher.classList.remove("is-opening");
     launcher.hidden = true;
     if (pendingPosition) {
       windowPosition = pendingPosition;
       pendingPosition = null;
     }
     if (windowPosition) requestAnimationFrame(() => clampWindowPosition());
+    if (animate && wasClosed) playAnimation(wrap, "is-opening");
   }
 
-  function closeChat() {
+  function finishClose() {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    wrap.hidden = true;
+    wrap.classList.remove("is-closing");
+    wrap.inert = false;
     if (minimized) {
       setMinimized(false);
       postToChat({ type: "expand" });
     }
-    wrap.hidden = true;
     setLauncherVisible(launcherVisible);
+    if (!launcher.hidden) playAnimation(launcher, "is-opening");
+  }
+
+  function closeChat() {
+    if (wrap.hidden || wrap.classList.contains("is-closing")) return;
+    wrap.inert = true;
+    wrap.classList.remove("is-opening");
+    if (reduceMotion.matches) {
+      finishClose();
+      return;
+    }
+    wrap.classList.add("is-closing");
+    closeTimer = setTimeout(finishClose, 150);
   }
 
   function toggleChat() {
-    if (wrap.hidden) openChat();
+    if (wrap.hidden || wrap.classList.contains("is-closing")) openChat();
     else closeChat();
   }
 
@@ -263,7 +328,7 @@
     }
   }
 
-  launcher.addEventListener("click", openChat);
+  launcher.addEventListener("click", () => openChat());
 
   wrap.addEventListener("transitionend", (event) => {
     if (event.propertyName === "height") clampWindowPosition();
