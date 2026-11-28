@@ -805,21 +805,36 @@ function updateComposer() {
   sendBtn.innerHTML = SEND_ICON;
 }
 
+function webSearchBackend() {
+  if (!provider || provider.format === "demo") return null;
+  if (provider.id === "deepseek" &&
+      provider.format === "openai" &&
+      /^deepseek-flash(?:$|[-.])/i.test(String(activeModel?.id || ""))) {
+    return "server";
+  }
+  return "deepseek";
+}
+
 function deepseekWebSearchAvailable() {
-  return provider?.id === "deepseek" &&
-    provider?.format === "openai" &&
-    /^deepseek-flash(?:$|[-.])/i.test(String(activeModel?.id || ""));
+  return Boolean(webSearchBackend());
 }
 
 function updateWebSearchUI() {
-  const available = deepseekWebSearchAvailable();
+  const backend = webSearchBackend();
+  const available = Boolean(backend);
   const on = available && Boolean(prefs.webSearchOn);
   webSearchToggle.hidden = !available;
   webSearchToggle.classList.toggle("is-on", on);
   webSearchToggle.setAttribute("aria-pressed", String(on));
-  webSearchToggle.title = on
-    ? "联网搜索已开启，由模型决定是否检索"
-    : "开启联网搜索（由模型决定何时搜索）";
+  webSearchToggle.title = !available
+    ? ""
+    : backend === "server"
+      ? on
+        ? "联网搜索已开启，由模型决定是否检索（DeepSeek 服务端工具）"
+        : "开启联网搜索（由模型决定何时搜索）"
+      : on
+        ? "联网搜索已开启：先用当前问题调用 DeepSeek 搜索，再把结果交给当前模型"
+        : "开启联网搜索（使用设置中的 DeepSeek API Key，可能产生搜索费用）";
 }
 
 function deepseekThinkingAvailable() {
